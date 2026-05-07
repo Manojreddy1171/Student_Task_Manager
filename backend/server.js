@@ -50,6 +50,21 @@ app.use('/api/events',        require('./routes/events'));
 // ── Health Check ──────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
+// ── Serve Frontend ─────────────────────────────────────────
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/pages', 'index.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/pages', 'dashboard.html'));
+});
+
+app.get('/admin-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/pages', 'admin-dashboard.html'));
+});
+
 // ── Error Handler ─────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack);

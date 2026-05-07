@@ -1,8 +1,11 @@
 {
   "name": "student-task-manager",
   "version": "1.0.0",
+  "main": "backend/server.js",
   "description": "Student Task Manager - Full Stack Project",
   "scripts": {
+    "postinstall": "cd backend && npm install",
+    "start": "cd backend && node server.js",
     "start-all": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd backend && set PORT=5001 && npm start",
     "start:frontend": "cd frontend && python -m http.server 3001",
