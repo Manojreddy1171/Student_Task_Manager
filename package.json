@@ -4,7 +4,7 @@
   "main": "backend/server.js",
   "description": "Student Task Manager - Full Stack Project",
   "scripts": {
-    "postinstall": "cd backend && npm install",
+    "postinstall": "cd backend && npm install --build-from-source=sqlite3",
     "start": "cd backend && node server.js",
     "start-all": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd backend && set PORT=5001 && npm start",
