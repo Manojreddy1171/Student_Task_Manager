@@ -1,0 +1,249 @@
+/* Tailwind CSS - Production Build for TaskAcademy */
+/* Essential utilities for the application */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb;
+}
+
+* {
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-transform: translateX(var(--tw-translate-x)) translateY(var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+body {
+  margin: 0;
+  line-height: inherit;
+}
+
+/* Display utilities */
+.hidden {
+  display: none;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.flex {
+  display: flex;
+}
+
+.grid {
+  display: grid;
+}
+
+.relative {
+  position: relative;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.inset-0 {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* Width & Max-width */
+.w-full {
+  width: 100%;
+}
+
+.max-w-md {
+  max-width: 28rem;
+}
+
+/* Height */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+/* Padding */
+.p-4 {
+  padding: 1rem;
+}
+
+.p-8 {
+  padding: 2rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+/* Margin */
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+/* Flexbox */
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+/* Grid */
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-3 {
+  gap: 0.75rem;
+}
+
+/* Border Radius */
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+/* Border */
+.border-b {
+  border-bottom-width: 1px;
+}
+
+/* Text */
+.text-center {
+  text-align: center;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+/* Font Weight */
+.font-bold {
+  font-weight: 700;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+/* Text Color */
+.text-white {
+  color: #ffffff;
+}
+
+.text-green-400 {
+  color: #4ade80;
+}
+
+/* Space utilities */
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+/* Transform */
+@media (prefers-reduced-motion: no-preference) {
+  .group:hover .group-hover\:block {
+    display: block;
+  }
+}
+
+/* Transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.hover\:underline:hover {
+  text-decoration-line: underline;
+}
+
+/* Utilities for positioning */
+.pb-3 {
+  padding-bottom: 0.75rem;
+}
+
+/* Ensure disabled buttons work */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Selection */
+::selection {
+  background-color: #6c63ff;
+  color: #ffffff;
+}

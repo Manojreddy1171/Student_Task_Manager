@@ -1,0 +1,15 @@
+{
+  "name": "student-task-manager",
+  "version": "1.0.0",
+  "description": "Student Task Manager - Full Stack Project",
+  "scripts": {
+    "start-all": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && set PORT=5001 && npm start",
+    "start:frontend": "cd frontend && python -m http.server 3001",
+    "init-db": "cd backend && node init-db.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "tailwindcss": "^4.2.4"
+  }
+}

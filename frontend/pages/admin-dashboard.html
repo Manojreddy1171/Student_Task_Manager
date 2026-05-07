@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskAcademy — Admin Dashboard</title>
+<link rel="stylesheet" href="../css/tailwind.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<!-- Firebase App (the core Firebase SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<style>
+  body { font-family: 'DM Sans', sans-serif; background: #0f1117; color: #e8eaf6; }
+  .mono { font-family: 'Space Mono', monospace; }
+  .card { background: #171b26; border: 1px solid #2a2f45; border-radius: 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: #8b90a7; cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: #e8eaf6; background: #1e2233; }
+  .nav-item.active { color: #4fc3f7; border-left-color: #4fc3f7; background: rgba(79,195,247,.08); }
+  input, select, textarea { background: #1e2233; border: 1px solid rgba(255,255,255,0.1); color: #e8eaf6; border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #4fc3f7; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+  .btn-primary { background: #4fc3f7; color: #0f1117; }
+  .btn-primary:hover { background: #38b2f0; }
+  .btn-danger { background: rgba(248,113,113,.2); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+  .modal-bg { background: rgba(0,0,0,.7); }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+  .p-high { background: rgba(248,113,113,.15); color: #f87171; }
+  .p-med  { background: rgba(251,191,36,.15);  color: #fbbf24; }
+  .p-low  { background: rgba(74,222,128,.15);  color: #4ade80; }
+</style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<div class="w-56 bg-gray-900 border-r border-gray-800 flex flex-col flex-shrink-0">
+  <div class="p-5 border-b border-gray-800">
+    <div class="mono text-sm font-bold text-blue-300">TaskAcademy</div>
+    <div class="text-xs text-gray-500 mt-1 tracking-widest">ADMIN PANEL</div>
+  </div>
+  <nav class="flex-1 py-3">
+    <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
+    <div class="nav-item" onclick="showPage('tasks')">📋 Manage Tasks</div>
+    <div class="nav-item" onclick="showPage('students')">👨‍🎓 Students</div>
+    <div class="nav-item" onclick="showPage('groups')">👥 Groups</div>
+    <div class="nav-item" onclick="showPage('analytics')">📈 Analytics</div>
+  </nav>
+  <div class="p-3 border-t border-gray-800 flex items-center gap-2">
+    <div class="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-300" id="adminAvatar"></div>
+    <div id="adminName" class="text-xs font-medium"></div>
+    <button onclick="logout()" class="ml-auto text-xs text-gray-600 hover:text-red-400">⏏</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="flex-1 overflow-y-auto flex flex-col">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900 sticky top-0 z-10">
+    <h1 id="pageTitle" class="text-base font-semibold">Overview</h1>
+    <button onclick="openCreateTask()" class="btn btn-primary text-xs">+ Create Task</button>
+  </div>
+
+  <div class="flex-1 p-6">
+
+    <!-- OVERVIEW -->
+    <div id="page-overview">
+      <div class="grid grid-cols-4 gap-3 mb-5">
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Students</div><div id="stat-students" class="mono text-2xl text-blue-300">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-tasks" class="mono text-2xl text-purple-400">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completion Rate</div><div id="stat-rate" class="mono text-2xl text-yellow-400">—</div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="card p-4">
+          <div class="text-sm font-semibold mb-3">Top Performers</div>
+          <div id="topPerformers"></div>
+        </div>
+        <div class="card p-4">
+          <div class="text-sm font-semibold mb-3">Tasks by Priority</div>
+          <canvas id="priorityChart" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div id="page-tasks" class="hidden">
+      <div id="adminTasksList" class="space-y-2">Loading...</div>
+    </div>
+
+    <!-- STUDENTS -->
+    <div id="page-students" class="hidden">
+      <div id="studentsList" class="space-y-2">Loading...</div>
+    </div>
+
+    <!-- GROUPS -->
+    <div id="page-groups" class="hidden">
+      <button onclick="openCreateGroup()" class="btn btn-primary mb-4 text-xs">+ Create Group</button>
+      <div id="adminGroupsList" class="grid grid-cols-2 gap-4">Loading...</div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div id="page-analytics" class="hidden">
+      <div class="card p-4 mb-4">
+        <div class="text-sm font-semibold mb-3">Weekly Task Creation</div>
+        <canvas id="weeklyChart" height="120"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Create Task Modal -->
+<div id="createTaskModal" class="hidden fixed inset-0 modal-bg z-30 flex items-center justify-center p-4">
+  <div class="card p-6 w-full max-w-lg">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Create New Task</h3>
+      <button onclick="closeModals()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <div class="space-y-3">
+      <input id="taskTitle" placeholder="Task title *" />
+      <textarea id="taskDesc" placeholder="Description" rows="3"></textarea>
+      <div class="grid grid-cols-2 gap-3">
+        <select id="taskPriority">
+          <option value="medium">Priority: Medium</option>
+          <option value="high">Priority: High</option>
+          <option value="low">Priority: Low</option>
+        </select>
+        <input id="taskDeadline" type="datetime-local" />
+      </div>
+      <select id="taskAssignTo"><option value="">Assign to student...</option></select>
+      <input id="taskXP" type="number" placeholder="XP Reward (default 50)" value="50" />
+      <div id="createTaskError" class="text-red-400 text-xs hidden"></div>
+      <div class="flex gap-2 justify-end">
+        <button onclick="closeModals()" class="btn btn-ghost">Cancel</button>
+        <button onclick="createTask()" class="btn btn-primary">Create Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Group Modal -->
+<div id="createGroupModal" class="hidden fixed inset-0 modal-bg z-30 flex items-center justify-center p-4">
+  <div class="card p-6 w-full max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Create Group</h3>
+      <button onclick="closeModals()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <div class="space-y-3">
+      <input id="groupName" placeholder="Group name *" />
+      <textarea id="groupDesc" placeholder="Description" rows="2"></textarea>
+      <button onclick="createGroup()" class="btn btn-primary w-full">Create Group</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+let adminUser = null;
+requireAuth('admin', (user) => {
+  adminUser = user;
+  
+  document.getElementById('adminAvatar').textContent = adminUser.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('adminName').textContent = adminUser.name;
+  
+  loadOverview();
+});
+
+let studentCache = [];
+
+const pages = ['overview','tasks','students','groups','analytics'];
+function showPage(name) {
+  pages.forEach(p => document.getElementById(`page-${p}`).classList.add('hidden'));
+  document.getElementById(`page-${name}`).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+  document.getElementById('pageTitle').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+
+  if (name === 'tasks')     loadAdminTasks();
+  if (name === 'students')  loadStudents();
+  if (name === 'groups')    loadAdminGroups();
+  if (name === 'analytics') loadAnalytics();
+}
+
+// ── Overview ───────────────────────────────────────────────
+async function loadOverview() {
+  const data = await API.getOverview();
+  if (!data?.success) return;
+  const d = data.data;
+
+  document.getElementById('stat-students').textContent = d.totalUsers;
+  document.getElementById('stat-tasks').textContent    = d.totalTasks;
+  document.getElementById('stat-done').textContent     = d.completedTasks;
+  document.getElementById('stat-rate').textContent     = d.completionRate + '%';
+
+  document.getElementById('topPerformers').innerHTML = d.completionByUser.slice(0,5).map((u, i) => `
+    <div class="flex items-center gap-2 py-1.5 border-b border-gray-800 text-sm">
+      <span class="text-gray-500 w-5">${i+1}.</span>
+      <span class="flex-1">${u.name}</span>
+      <span class="text-green-400 text-xs mono">${u.completed} done</span>
+    </div>
+  `).join('');
+
+  const ctx = document.getElementById('priorityChart').getContext('2d');
+  const priorities = ['high','medium','low'];
+  const counts = priorities.map(p => d.tasksByPriority.find(x=>x.priority===p)?.count || 0);
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['High', 'Medium', 'Low'],
+      datasets: [{ data: counts, backgroundColor: ['#f87171','#fbbf24','#4ade80'], borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#9ca3af' } }, x: { ticks: { color: '#9ca3af' } } } }
+  });
+}
+
+// ── Admin Tasks ────────────────────────────────────────────
+async function loadAdminTasks() {
+  const data = await API.getTasks();
+  if (!data?.success) return;
+  document.getElementById('adminTasksList').innerHTML = data.data.length === 0
+    ? '<p class="text-gray-500 text-sm">No tasks yet. Create one!</p>'
+    : data.data.map(t => `
+      <div class="card p-4 flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-sm">${t.title}</div>
+          <div class="text-xs text-gray-500 mt-0.5">Assigned to: ${t.assigned_to_name || 'Unassigned'} · Due: ${formatDate(t.deadline)}</div>
+        </div>
+        ${priorityBadge(t.priority)}
+        ${statusBadge(t.status)}
+        <button onclick="deleteTask(${t.id})" class="btn btn-danger text-xs py-1 px-2 flex-shrink-0">Delete</button>
+      </div>
+    `).join('');
+}
+
+async function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  const data = await API.delete(`/tasks/${id}`);
+  if (data?.success) loadAdminTasks();
+}
+
+// ── Students ───────────────────────────────────────────────
+async function loadStudents() {
+  const data = await API.get('/users');
+  if (!data?.success) return;
+  studentCache = data.data;
+  document.getElementById('studentsList').innerHTML = data.data.map(u => `
+    <div class="card p-4 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-purple-900 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0">
+        ${u.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}
+      </div>
+      <div class="flex-1">
+        <div class="text-sm font-medium">${u.name}</div>
+        <div class="text-xs text-gray-500">${u.email}</div>
+      </div>
+      <div class="text-xs text-yellow-400 mono">${u.xp_points} XP</div>
+      <span class="text-xs ${u.is_active ? 'text-green-400' : 'text-red-400'}">${u.is_active ? 'Active' : 'Disabled'}</span>
+      <button onclick="toggleStudent(${u.id})" class="btn btn-ghost text-xs py-1">Toggle</button>
+    </div>
+  `).join('');
+}
+
+async function toggleStudent(id) {
+  await API.put(`/users/${id}/toggle`);
+  loadStudents();
+}
+
+// ── Groups ─────────────────────────────────────────────────
+async function loadAdminGroups() {
+  const data = await API.getGroups();
+  if (!data?.success) return;
+  document.getElementById('adminGroupsList').innerHTML = data.data.length === 0
+    ? '<p class="text-gray-500 text-sm">No groups yet.</p>'
+    : data.data.map(g => `
+      <div class="card p-4">
+        <div class="font-medium text-sm mb-1">👥 ${g.name}</div>
+        <div class="text-xs text-gray-500">${g.description || ''}</div>
+        <div class="text-xs text-gray-600 mt-2">${g.member_count} members</div>
+      </div>
+    `).join('');
+}
+
+// ── Analytics ──────────────────────────────────────────────
+async function loadAnalytics() {
+  const data = await API.getOverview();
+  if (!data?.success) return;
+  const ctx = document.getElementById('weeklyChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.data.weeklyTasks.map(w => w.day),
+      datasets: [{ label: 'Tasks Created', data: data.data.weeklyTasks.map(w => w.count), borderColor: '#6c63ff', backgroundColor: 'rgba(108,99,255,.1)', fill: true, tension: 0.4 }]
+    },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } }, scales: { y: { ticks: { color: '#9ca3af' } }, x: { ticks: { color: '#9ca3af' } } } }
+  });
+}
+
+// ── Create Task ────────────────────────────────────────────
+function openCreateTask() {
+  populateStudentSelect();
+  document.getElementById('createTaskModal').classList.remove('hidden');
+}
+
+async function populateStudentSelect() {
+  if (studentCache.length === 0) { const d = await API.get('/users'); if (d?.success) studentCache = d.data; }
+  document.getElementById('taskAssignTo').innerHTML = `<option value="">Assign to student...</option>` +
+    studentCache.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+}
+
+async function createTask() {
+  const title    = document.getElementById('taskTitle').value.trim();
+  const desc     = document.getElementById('taskDesc').value.trim();
+  const priority = document.getElementById('taskPriority').value;
+  const deadline = document.getElementById('taskDeadline').value;
+  const assigned = document.getElementById('taskAssignTo').value;
+  const xp       = document.getElementById('taskXP').value || 50;
+  const errEl    = document.getElementById('createTaskError');
+
+  if (!title || !deadline) { errEl.textContent = 'Title and deadline are required.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const data = await API.post('/tasks', { title, description: desc, priority, deadline, assigned_to: assigned || null, xp_reward: parseInt(xp) });
+  if (data?.success) { closeModals(); loadAdminTasks(); alert('Task created successfully!'); }
+  else { errEl.textContent = data?.message || 'Failed to create task'; errEl.classList.remove('hidden'); }
+}
+
+// ── Create Group ───────────────────────────────────────────
+function openCreateGroup() { document.getElementById('createGroupModal').classList.remove('hidden'); }
+async function createGroup() {
+  const name = document.getElementById('groupName').value.trim();
+  const desc = document.getElementById('groupDesc').value.trim();
+  if (!name) { alert('Group name required'); return; }
+  const data = await API.post('/groups', { name, description: desc });
+  if (data?.success) { closeModals(); loadAdminGroups(); }
+}
+
+function closeModals() {
+  document.getElementById('createTaskModal').classList.add('hidden');
+  document.getElementById('createGroupModal').classList.add('hidden');
+}
+
+// Initialization now happens inside requireAuth callback
+</script>
+</body>
+</html>

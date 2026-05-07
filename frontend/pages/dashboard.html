@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskAcademy — Dashboard</title>
+<link rel="stylesheet" href="../css/tailwind.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<!-- Firebase App (the core Firebase SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<style>
+  body { font-family: 'DM Sans', sans-serif; background: #0f1117; color: #e8eaf6; }
+  .mono { font-family: 'Space Mono', monospace; }
+  .sidebar { background: #171b26; border-right: 1px solid #2a2f45; }
+  .card { background: #171b26; border: 1px solid #2a2f45; border-radius: 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: #8b90a7; cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: #e8eaf6; background: #1e2233; }
+  .nav-item.active { color: #6c63ff; border-left-color: #6c63ff; background: rgba(108,99,255,.08); }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+  .p-high { background: rgba(248,113,113,.15); color: #f87171; }
+  .p-med  { background: rgba(251,191,36,.15);  color: #fbbf24; }
+  .p-low  { background: rgba(74,222,128,.15);  color: #4ade80; }
+  .xp-bar { height: 6px; border-radius: 3px; background: #1e2233; overflow: hidden; }
+  .xp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6c63ff, #4fc3f7); transition: width .5s ease; }
+  .modal-bg { background: rgba(0,0,0,.7); }
+  input, select, textarea { background: #1e2233; border: 1px solid rgba(255,255,255,0.1); color: #e8eaf6; border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #6c63ff; }
+  input[type="color"] { -webkit-appearance: none; appearance: none; padding: 0; height: 38px; width: 48px; flex-shrink: 0; cursor: pointer; }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
+  input[type="color"]::-moz-color-swatch { border: none; border-radius: 6px; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+  .btn-primary { background: #6c63ff; color: white; }
+  .btn-primary:hover { background: #5a52e0; }
+  .btn-ghost { background: transparent; color: #8b90a7; border: 1px solid #2a2f45; }
+  .btn-ghost:hover { background: #1e2233; color: #e8eaf6; }
+</style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<div class="sidebar w-56 flex flex-col flex-shrink-0">
+  <div class="p-5 border-b border-gray-800">
+    <div class="mono text-sm font-bold text-purple-400">TaskAcademy</div>
+    <div class="text-xs text-gray-500 mt-1 tracking-widest">STUDENT</div>
+  </div>
+  <nav class="flex-1 py-3 overflow-y-auto">
+    <div class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</div>
+    <div class="nav-item" onclick="showPage('profile')">👤 My Profile</div>
+    <div class="nav-item" onclick="showPage('tasks')">📋 My Tasks <span id="tasksCount" class="ml-auto text-xs bg-purple-900 text-purple-300 px-2 py-0.5 rounded-full"></span></div>
+    <div class="nav-item" onclick="showPage('calendar')">📅 Calendar</div>
+    <div class="nav-item" onclick="showPage('groups')">👥 Groups</div>
+    <div class="nav-item" onclick="showPage('achievements')">🏆 Achievements</div>
+    <div class="nav-item" onclick="showPage('leaderboard')">🥇 Leaderboard</div>
+  </nav>
+  <div class="p-3 border-t border-gray-800 flex items-center gap-2">
+    <div id="avatarCircle" class="w-8 h-8 rounded-full bg-purple-900 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0"></div>
+    <div class="min-w-0">
+      <div id="userName" class="text-xs font-medium truncate"></div>
+      <div id="userXP" class="text-xs text-gray-500"></div>
+    </div>
+    <button onclick="logout()" class="ml-auto text-xs text-gray-600 hover:text-red-400">⏏</button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="flex-1 overflow-y-auto flex flex-col">
+  <!-- Topbar -->
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900 sticky top-0 z-10">
+    <h1 id="pageTitle" class="text-base font-semibold">Dashboard</h1>
+    <div class="flex items-center gap-3">
+      <button onclick="toggleNotifs()" class="relative text-gray-400 hover:text-white">
+        🔔 <span id="notifBadge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center text-white hidden">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Pages -->
+  <div class="flex-1 p-6">
+
+    <!-- DASHBOARD PAGE -->
+    <div id="page-dashboard">
+      <div class="grid grid-cols-5 gap-3 mb-5">
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-total" class="mono text-2xl text-blue-300">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending</div><div id="stat-pending" class="mono text-2xl text-yellow-400">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">My XP</div><div id="stat-xp" class="mono text-2xl text-pink-400">—</div></div>
+        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Productivity</div><div id="stat-prod" class="mono text-2xl text-purple-400">—</div></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="card p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-sm font-semibold">Upcoming Deadlines</span>
+          </div>
+          <div id="upcomingList" class="space-y-2 text-sm text-gray-400">Loading...</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-sm font-semibold mb-3">Task Progress</div>
+          <canvas id="progressChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS PAGE -->
+    <div id="page-tasks" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-semibold text-lg">My Tasks</h2>
+        <button onclick="openCreateTaskModal()" class="btn btn-primary text-xs">+ Create Task</button>
+      </div>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex gap-2">
+          <select id="filterStatus" onchange="loadTasks()" class="text-xs py-2 px-3 w-auto">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select id="filterPriority" onchange="loadTasks()" class="text-xs py-2 px-3 w-auto">
+            <option value="">All Priority</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <input id="searchTasks" placeholder="Search tasks..." onkeyup="loadTasks()" class="w-48 text-xs py-2">
+      </div>
+      <div id="tasksList" class="space-y-2">Loading...</div>
+    </div>
+
+    <!-- ACHIEVEMENTS PAGE -->
+    <div id="page-achievements" class="hidden">
+      <div id="achievementsGrid" class="grid grid-cols-3 gap-4">Loading...</div>
+    </div>
+
+    <!-- LEADERBOARD PAGE -->
+    <div id="page-leaderboard" class="hidden">
+      <div class="card p-4 max-w-lg">
+        <div class="text-sm font-semibold mb-4">Top Students This Month</div>
+        <div id="leaderboardList"></div>
+      </div>
+    </div>
+
+    <!-- CALENDAR PAGE -->
+    <div id="page-calendar" class="hidden">
+      <div class="flex justify-between items-center mb-4 max-w-2xl">
+        <h2 class="font-semibold text-lg">Calendar</h2>
+        <button onclick="openCreateEventModal()" class="btn btn-primary text-xs">+ Add Event</button>
+      </div>
+      <div class="card p-4 max-w-2xl">
+        <div class="text-sm font-semibold mb-3">Upcoming Events & Deadlines</div>
+        <div id="calendarEvents" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- GROUPS PAGE -->
+    <div id="page-groups" class="hidden">
+      <!-- Groups List View -->
+      <div id="groupsListView">
+        <h2 class="text-xl font-bold mb-4">My Groups</h2>
+        <div id="groupsList" class="grid grid-cols-1 lg:grid-cols-3 gap-4">Loading...</div>
+      </div>
+      
+      <!-- Group Details View -->
+      <div id="groupDetailsView" class="hidden space-y-6">
+        <button onclick="closeGroupDetails()" class="text-gray-400 hover:text-white text-sm mb-2 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          Back to Groups
+        </button>
+        
+        <div class="card p-6 bg-gradient-to-r from-purple-900/40 to-blue-900/20 border-purple-500/30">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 id="groupDetailName" class="text-2xl font-bold text-white">Group Name</h2>
+              <p id="groupDetailProject" class="text-gray-300 mt-1">Project Title</p>
+            </div>
+            <div class="text-left md:text-right text-sm text-gray-400">
+              <p>Start: <span id="groupDetailStart" class="text-white"></span></p>
+              <p>Due: <span id="groupDetailDue" class="text-white font-medium"></span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Left Column: Members & Tasks -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Members -->
+            <div class="card p-0 overflow-hidden">
+              <div class="p-4 border-b border-gray-800 bg-gray-800/30 font-semibold">Group Members</div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                  <thead class="text-xs text-gray-400 uppercase bg-gray-800/50">
+                    <tr>
+                      <th class="px-4 py-3">Student</th>
+                      <th class="px-4 py-3">Role</th>
+                      <th class="px-4 py-3">Assigned Task</th>
+                    </tr>
+                  </thead>
+                  <tbody id="groupMembersList" class="divide-y divide-gray-800">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tasks -->
+            <div class="card p-0 overflow-hidden">
+              <div class="p-4 border-b border-gray-800 bg-gray-800/30 flex justify-between items-center">
+                <h3 class="font-semibold">Project Tasks</h3>
+                <button class="btn btn-primary text-xs py-1 px-3">Add Task</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                  <thead class="text-xs text-gray-400 uppercase bg-gray-800/50">
+                    <tr>
+                      <th class="px-4 py-3">Task</th>
+                      <th class="px-4 py-3">Assigned To</th>
+                      <th class="px-4 py-3">Priority</th>
+                      <th class="px-4 py-3">Status</th>
+                      <th class="px-4 py-3">Due Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="groupTasksList" class="divide-y divide-gray-800">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Chat & Files -->
+          <div class="space-y-6">
+            <!-- Chat Widget -->
+            <div class="card p-0 flex flex-col h-[400px]">
+              <div class="p-4 border-b border-gray-800 bg-gray-800/30 font-semibold">Group Chat</div>
+              <div id="groupChatList" class="flex-1 p-4 overflow-y-auto space-y-4">
+              </div>
+              <div class="p-3 border-t border-gray-800 bg-gray-900/50">
+                <div class="flex gap-2">
+                  <input type="text" placeholder="Type a message..." class="bg-gray-800 border-gray-700 text-sm" />
+                  <button class="btn btn-primary px-3">Send</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Files -->
+            <div class="card p-0 overflow-hidden">
+              <div class="p-4 border-b border-gray-800 bg-gray-800/30 flex justify-between items-center">
+                <h3 class="font-semibold">Shared Files</h3>
+                <button class="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                  Upload
+                </button>
+              </div>
+              <div id="groupFilesList" class="p-4 space-y-3">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE PAGE -->
+    <div id="page-profile" class="hidden space-y-6">
+      
+      <!-- Top Grid: Personal Info & Stats -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- 1. Personal & Account Information -->
+        <div class="card p-6 col-span-1 lg:col-span-1 border-purple-900/50 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-3 text-xs font-semibold text-purple-400 bg-purple-900/20 rounded-bl-lg" id="profRole">STUDENT</div>
+          <div class="flex items-center gap-4 mb-6">
+            <div id="profAvatar" class="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center text-xl font-bold text-white shadow-lg">U</div>
+            <div>
+              <h2 id="profName" class="text-xl font-bold">User Name</h2>
+              <div id="profUsername" class="text-sm text-gray-400">@username</div>
+            </div>
+          </div>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-gray-500">Student ID</span><span id="profStudentId" class="font-medium text-gray-200">-</span></div>
+            <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-gray-500">Email</span><span id="profEmail" class="font-medium text-gray-200">-</span></div>
+            <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-gray-500">Phone</span><span id="profPhone" class="font-medium text-gray-200">-</span></div>
+            <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-gray-500">Department</span><span id="profDept" class="font-medium text-gray-200">-</span></div>
+            <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-gray-500">Year</span><span id="profYear" class="font-medium text-gray-200">-</span></div>
+            <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-gray-500">College</span><span id="profCollege" class="font-medium text-gray-200">-</span></div>
+            <div class="flex justify-between text-xs pt-2"><span class="text-gray-500">Last Login</span><span id="profLastLogin" class="text-gray-400">-</span></div>
+          </div>
+        </div>
+
+        <!-- Middle Column: Stats & Upcoming -->
+        <div class="col-span-1 lg:col-span-2 space-y-6">
+          
+          <!-- 3. Academic Task Statistics -->
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="card p-4 text-center"><div class="text-xs text-gray-500 mb-1">Total Tasks</div><div id="pStatTotal" class="text-2xl font-bold text-blue-400">-</div></div>
+            <div class="card p-4 text-center"><div class="text-xs text-gray-500 mb-1">Completed</div><div id="pStatDone" class="text-2xl font-bold text-green-400">-</div></div>
+            <div class="card p-4 text-center"><div class="text-xs text-gray-500 mb-1">Pending</div><div id="pStatPend" class="text-2xl font-bold text-yellow-400">-</div></div>
+            <div class="card p-4 text-center"><div class="text-xs text-gray-500 mb-1">Overdue</div><div id="pStatOver" class="text-2xl font-bold text-red-400">-</div></div>
+            <div class="card p-4 text-center border border-purple-500/30 bg-purple-900/10"><div class="text-xs text-purple-400 mb-1">Productivity</div><div id="pStatProd" class="text-2xl font-bold text-purple-400">-</div></div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 4. Upcoming Deadlines -->
+            <div class="card p-5 h-64 flex flex-col">
+              <h3 class="font-semibold text-sm mb-4">📅 Nearest Deadlines</h3>
+              <div id="profUpcoming" class="flex-1 overflow-y-auto space-y-3"></div>
+            </div>
+
+            <!-- 5. Achievements -->
+            <div class="card p-5 h-64 flex flex-col">
+              <h3 class="font-semibold text-sm mb-4">🏆 Recent Badges</h3>
+              <div id="profBadges" class="flex-1 overflow-y-auto grid grid-cols-2 gap-2"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 6. Progress Charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card p-5">
+          <h3 class="font-semibold text-sm mb-4">📈 Weekly Productivity</h3>
+          <canvas id="profWeeklyChart" height="200"></canvas>
+        </div>
+        <div class="card p-5">
+          <h3 class="font-semibold text-sm mb-4">📊 Category Performance</h3>
+          <canvas id="profCategoryChart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- 9. Uploaded Files -->
+        <div class="card p-5 col-span-1">
+          <h3 class="font-semibold text-sm mb-4">📂 Recent Submissions</h3>
+          <div id="profSubmissions" class="space-y-3"></div>
+        </div>
+
+        <!-- 10. Group Info -->
+        <div class="card p-5 col-span-1">
+          <h3 class="font-semibold text-sm mb-4">🤝 My Groups</h3>
+          <div id="profGroups" class="space-y-3"></div>
+        </div>
+
+        <!-- 8. Settings -->
+        <div class="card p-5 col-span-1 bg-gray-900/50">
+          <h3 class="font-semibold text-sm mb-4">⚙️ Edit Profile</h3>
+          <div class="space-y-3">
+            <input id="editProfPhone" placeholder="Phone Number" class="text-xs" />
+            <input id="editProfDept" placeholder="Department" class="text-xs" />
+            <input id="editProfYear" placeholder="Academic Year" class="text-xs" />
+            <input id="editProfCollege" placeholder="College Name" class="text-xs" />
+            <input id="editProfStudentId" placeholder="Student ID" class="text-xs" />
+            <button onclick="saveProfileSettings()" class="btn btn-primary w-full text-xs py-2 mt-2">Save Changes</button>
+            <div class="pt-2 mt-2 border-t border-gray-800">
+              <button onclick="alert('Password reset link sent to your email.')" class="btn btn-ghost w-full text-xs py-2 mb-2">Change Password</button>
+              <button onclick="deleteAccount()" class="btn w-full text-xs py-2 bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white border border-red-900 transition-colors">Delete Account Permanently</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Notifications Drawer -->
+<div id="notifDrawer" class="hidden fixed right-0 top-0 h-full w-72 bg-gray-900 border-l border-gray-800 z-20 p-4">
+  <div class="flex justify-between items-center mb-4">
+    <span class="font-semibold text-sm">Notifications</span>
+    <button onclick="toggleNotifs()" class="text-gray-400 hover:text-white">✕</button>
+  </div>
+  <div id="notifList" class="space-y-3"></div>
+</div>
+
+<!-- Task Detail Modal -->
+<div id="taskModal" class="hidden fixed inset-0 modal-bg z-30 flex items-center justify-center p-4">
+  <div class="card p-6 w-full max-w-md">
+    <div class="flex justify-between items-start mb-4">
+      <h3 id="modalTaskTitle" class="font-semibold text-base"></h3>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <div id="modalTaskBody"></div>
+  </div>
+</div>
+
+<!-- Create Task Modal (Student) -->
+<div id="createTaskModal" class="hidden fixed inset-0 modal-bg z-40 flex items-center justify-center p-4">
+  <div class="card p-6 w-full max-w-lg">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Create Personal Task</h3>
+      <button onclick="closeCreateTaskModal()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1 ml-1">Task Title *</label>
+        <input id="taskTitle" placeholder="Enter task title" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1 ml-1">Description</label>
+        <textarea id="taskDesc" placeholder="Enter description..." rows="3"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 ml-1">Priority</label>
+          <select id="taskPriority">
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 ml-1">Deadline *</label>
+          <input id="taskDeadline" type="datetime-local" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 ml-1">Start Date</label>
+          <input id="taskStartDate" type="datetime-local" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 ml-1">Est. Hours</label>
+          <input id="taskEstHours" type="number" placeholder="e.g. 2" min="1" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 ml-1">Category</label>
+          <select id="taskCategory">
+            <option value="">Select Category...</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 ml-1">Repeat</label>
+          <select id="taskRepeat">
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+      <div id="createTaskError" class="text-red-400 text-xs hidden"></div>
+      <div class="flex gap-2 justify-end pt-2">
+        <button onclick="closeCreateTaskModal()" class="btn btn-ghost">Cancel</button>
+        <button onclick="createStudentTask()" class="btn btn-primary">Create Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Event Modal -->
+<div id="createEventModal" class="hidden fixed inset-0 modal-bg z-40 flex items-center justify-center p-4">
+  <div class="card p-6 w-full max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Add Event</h3>
+      <button onclick="closeCreateEventModal()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <div class="space-y-3">
+      <input id="eventTitle" placeholder="Event title *" />
+      <input id="eventDate" type="datetime-local" />
+      <div class="flex items-center gap-3">
+        <label class="text-xs text-gray-400">Color:</label>
+        <input id="eventColor" type="color" value="#6c63ff" class="p-1 h-8 w-12 bg-transparent border-0 cursor-pointer" />
+        <label class="flex items-center gap-2 text-xs text-gray-300 ml-auto cursor-pointer">
+          <input id="eventReminder" type="checkbox" class="w-4 h-4 rounded bg-gray-800 border-gray-700" />
+          Set Reminder
+        </label>
+      </div>
+      <div id="createEventError" class="text-red-400 text-xs hidden"></div>
+      <div class="flex gap-2 justify-end">
+        <button onclick="closeCreateEventModal()" class="btn btn-ghost">Cancel</button>
+        <button onclick="saveNewEvent()" class="btn btn-primary">Save Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+let currentUser = null;
+requireAuth('student', (user) => {
+  currentUser = user;
+  
+  // Init user info
+  document.getElementById('avatarCircle').textContent = currentUser.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('userName').textContent = currentUser.name;
+
+  // Init pages
+  loadDashboard();
+  loadNotifications();
+  checkReminders();
+});
+
+// ── Page Navigation ────────────────────────────────────────
+const pages = ['dashboard','tasks','calendar','groups','achievements','leaderboard','profile'];
+function showPage(name) {
+  pages.forEach(p => document.getElementById(`page-${p}`).classList.add('hidden'));
+  document.getElementById(`page-${name}`).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+  document.getElementById('pageTitle').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+
+  if (name === 'tasks')        loadTasks();
+  if (name === 'achievements') loadAchievements();
+  if (name === 'leaderboard')  loadLeaderboard();
+  if (name === 'calendar')     loadCalendar();
+  if (name === 'groups')       loadGroups();
+  if (name === 'profile')      loadProfile();
+}
+
+// ── Dashboard ──────────────────────────────────────────────
+async function loadDashboard() {
+  const data = await API.getMyStats();
+  if (!data?.success) return;
+  const d = data.data;
+
+  document.getElementById('stat-total').textContent   = d.totalTasks;
+  document.getElementById('stat-done').textContent    = d.completedTasks;
+  document.getElementById('stat-pending').textContent = d.pendingTasks;
+  document.getElementById('stat-xp').textContent      = d.xp_points;
+  document.getElementById('stat-prod').textContent    = d.productivity + '%';
+  document.getElementById('userXP').textContent       = `${d.xp_points} XP · Rank #${d.myRank}`;
+  document.getElementById('tasksCount').textContent   = d.pendingTasks || '';
+
+  // Upcoming deadlines
+  const ul = document.getElementById('upcomingList');
+  if (d.upcomingDeadlines.length === 0) { ul.innerHTML = '<p class="text-gray-600">No upcoming deadlines 🎉</p>'; }
+  else {
+    ul.innerHTML = d.upcomingDeadlines.map(t => `
+      <div class="flex justify-between items-center py-1.5 border-b border-gray-800">
+        <span class="truncate mr-2">${t.title}</span>
+        <span class="text-xs text-gray-500 flex-shrink-0">${formatDate(t.deadline)}</span>
+      </div>
+    `).join('');
+  }
+
+  // Donut chart
+  if (window.progressChartInstance) {
+    window.progressChartInstance.destroy();
+  }
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  window.progressChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Completed', 'Pending'],
+      datasets: [{ data: [d.completedTasks, d.pendingTasks], backgroundColor: ['#4ade80','#374151'], borderWidth: 0 }]
+    },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af', font: { size: 12 } } } }, cutout: '70%' }
+  });
+}
+
+// ── Tasks ──────────────────────────────────────────────────
+async function loadTasks() {
+  const status   = document.getElementById('filterStatus')?.value || '';
+  const priority = document.getElementById('filterPriority')?.value || '';
+  const search   = document.getElementById('searchTasks')?.value || '';
+  let filters = [];
+  if (status)   filters.push(`status=${status}`);
+  if (priority) filters.push(`priority=${priority}`);
+  if (search)   filters.push(`search=${encodeURIComponent(search)}`);
+
+  const data = await API.getTasks(filters.length ? '?' + filters.join('&') : '');
+  const list = document.getElementById('tasksList');
+
+  if (!data?.success || data.data.length === 0) {
+    list.innerHTML = '<p class="text-gray-500 text-sm">No tasks found.</p>';
+    return;
+  }
+
+  list.innerHTML = data.data.map(t => `
+    <div class="card p-4 flex items-center gap-3 cursor-pointer hover:border-purple-700 transition-colors" onclick="openTaskModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+      <div class="flex-1 min-w-0">
+        <div class="font-medium text-sm truncate">${t.title}</div>
+        <div class="text-xs text-gray-500 mt-0.5">Due: ${formatDate(t.deadline)} · ${t.category_name || 'Uncategorized'}</div>
+        ${t.progress > 0 && t.status !== 'completed' ? `<div class="w-full bg-gray-800 rounded-full h-1 mt-2"><div class="bg-purple-500 h-1 rounded-full" style="width: ${t.progress}%"></div></div>` : ''}
+      </div>
+      ${priorityBadge(t.priority)}
+      ${statusBadge(t.status)}
+    </div>
+  `).join('');
+}
+
+function openTaskModal(task) {
+  document.getElementById('modalTaskTitle').textContent = task.title;
+  document.getElementById('modalTaskBody').innerHTML = `
+    <p class="text-sm text-gray-400 mb-3">${task.description || 'No description.'}</p>
+    <div class="grid grid-cols-2 gap-2 text-xs mb-4">
+      <div><span class="text-gray-500">Deadline:</span> ${formatDate(task.deadline)}</div>
+      <div><span class="text-gray-500">Priority:</span> ${task.priority}</div>
+      <div><span class="text-gray-500">Status:</span> ${task.status}</div>
+      <div><span class="text-gray-500">XP Reward:</span> ${task.xp_reward || 0} XP</div>
+      <div><span class="text-gray-500">Repeat:</span> ${task.repeat_type || 'None'}</div>
+      <div><span class="text-gray-500">Est. Hours:</span> ${task.estimated_hours || '-'}</div>
+    </div>
+    ${task.status !== 'completed' ? `
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-400">Update Progress (<span id="progVal">${task.progress || 0}</span>%)</label>
+        <input type="range" id="updateProgress" min="0" max="100" value="${task.progress || 0}" class="w-full mt-1" oninput="document.getElementById('progVal').textContent=this.value">
+      </div>
+      <textarea id="submitContent" placeholder="Write your submission notes..." rows="3"></textarea>
+      <div>
+        <label class="text-xs text-gray-400">Attach File (Optional)</label>
+        <input type="file" id="submitFile" class="text-xs mt-1 block w-full text-gray-400 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-purple-900 file:text-purple-300 hover:file:bg-purple-800"/>
+      </div>
+      <button onclick="submitTask('${task.id}')" class="btn btn-primary w-full">Save Updates / Submit ✓</button>
+    </div>` : '<p class="text-green-400 text-sm font-medium">✓ Task completed</p>'}
+  `;
+  document.getElementById('taskModal').classList.remove('hidden');
+}
+
+async function submitTask(taskId) {
+  const content = document.getElementById('submitContent')?.value;
+  const progress = parseInt(document.getElementById('updateProgress')?.value || 0);
+  const fileInput = document.getElementById('submitFile');
+  
+  // Basic update
+  await API.updateTask(taskId, { progress: progress });
+
+  // If there's content, file, or 100%, let's call the submit endpoint
+  if (content || fileInput?.files.length > 0 || progress === 100) {
+    const data = await API.post(`/tasks/${taskId}/submit`, { content });
+    if (data?.success) { 
+      closeModal(); 
+      alert(progress === 100 ? 'Task marked as completed!' : 'Progress and submission updated!'); 
+      loadTasks(); 
+      loadDashboard();
+    } else {
+      alert(data?.message || 'Submission failed');
+    }
+  } else {
+    closeModal();
+    loadTasks();
+    loadDashboard();
+  }
+}
+
+function closeModal() { document.getElementById('taskModal').classList.add('hidden'); }
+
+// ── Achievements ───────────────────────────────────────────
+async function loadAchievements() {
+  const data = await API.getAchievements();
+  if (!data?.success) return;
+  document.getElementById('achievementsGrid').innerHTML = data.data.map(a => `
+    <div class="card p-4 text-center ${a.earned ? '' : 'opacity-40'}">
+      <div class="text-3xl mb-2">${a.icon}</div>
+      <div class="font-medium text-sm">${a.name}</div>
+      <div class="text-xs text-gray-500 mt-1">${a.description}</div>
+      <div class="text-xs text-yellow-400 mt-1">+${a.xp_bonus} XP</div>
+      ${a.earned ? `<div class="text-xs text-green-400 mt-1">Earned ${formatDate(a.earned_at)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Leaderboard ────────────────────────────────────────────
+async function loadLeaderboard() {
+  const data = await API.getMyStats();
+  if (!data?.success) return;
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('leaderboardList').innerHTML = data.data.leaderboard.map((u, i) => `
+    <div class="flex items-center gap-3 py-2 border-b border-gray-800 ${u.id === currentUser.id ? 'bg-purple-950 rounded px-2' : ''}">
+      <span class="text-lg w-6 text-center">${medals[i] || i+1}</span>
+      <span class="flex-1 text-sm font-medium">${u.name} ${u.id === currentUser.id ? '(you)' : ''}</span>
+      <span class="mono text-sm text-yellow-400">${u.xp_points} XP</span>
+    </div>
+  `).join('');
+}
+
+// ── Notifications ──────────────────────────────────────────
+async function loadNotifications() {
+  const data = await API.getNotifs();
+  if (!data?.success) return;
+  const unread = data.data.filter(n => !n.is_read).length;
+  const badge = document.getElementById('notifBadge');
+  if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
+
+  document.getElementById('notifList').innerHTML = data.data.map(n => `
+    <div class="text-xs p-2 rounded border border-gray-800 ${n.is_read ? 'opacity-50' : ''}">
+      <div class="font-medium mb-0.5">${n.title}</div>
+      <div class="text-gray-400">${n.message}</div>
+    </div>
+  `).join('');
+}
+
+function toggleNotifs() { document.getElementById('notifDrawer').classList.toggle('hidden'); }
+
+// ── Calendar ───────────────────────────────────────────────
+async function loadCalendar() {
+  const data = await API.get('/events');
+  if (!data?.success) return;
+  document.getElementById('calendarEvents').innerHTML = data.data.length === 0
+    ? '<p class="text-gray-500 text-sm">No events.</p>'
+    : data.data.map(e => `
+      <div class="flex items-center gap-3 py-2 border-b border-gray-800">
+        <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${e.color || '#6c63ff'}"></div>
+        <div>
+          <div class="text-sm font-medium">${e.title}</div>
+          <div class="text-xs text-gray-500">${formatDate(e.event_date)} ${e.reminder ? ' ⏰ Reminder Set' : ''}</div>
+        </div>
+      </div>
+    `).join('');
+}
+
+// ── Profile ────────────────────────────────────────────────
+async function loadProfile() {
+  const data = await API.getProfile();
+  if (!data?.success) return;
+  const p = data.data;
+
+  // Personal Info
+  document.getElementById('profAvatar').textContent = (p.name || 'U').substring(0, 2).toUpperCase();
+  document.getElementById('profName').textContent = p.name || 'User';
+  document.getElementById('profUsername').textContent = '@' + (p.name || 'user').toLowerCase().replace(/\s+/g, '');
+  document.getElementById('profRole').textContent = (p.role || 'STUDENT').toUpperCase();
+  document.getElementById('profStudentId').textContent = p.student_id || 'Not Set';
+  document.getElementById('profEmail').textContent = p.email || 'Not Set';
+  document.getElementById('profPhone').textContent = p.phone || 'Not Set';
+  document.getElementById('profDept').textContent = p.department || 'Not Set';
+  document.getElementById('profYear').textContent = p.academic_year || 'Not Set';
+  document.getElementById('profCollege').textContent = p.college || 'Not Set';
+  document.getElementById('profLastLogin').textContent = p.lastSignInTime ? new Date(p.lastSignInTime).toLocaleString() : 'Never';
+
+  // Edit fields
+  document.getElementById('editProfPhone').value = p.phone || '';
+  document.getElementById('editProfDept').value = p.department || '';
+  document.getElementById('editProfYear').value = p.academic_year || '';
+  document.getElementById('editProfCollege').value = p.college || '';
+  document.getElementById('editProfStudentId').value = p.student_id || '';
+
+  // Stats
+  document.getElementById('pStatTotal').textContent = p.stats.total;
+  document.getElementById('pStatDone').textContent = p.stats.completed;
+  document.getElementById('pStatPend').textContent = p.stats.pending;
+  document.getElementById('pStatOver').textContent = p.stats.overdue;
+  document.getElementById('pStatProd').textContent = p.stats.productivity + '%';
+
+  // Submissions
+  const subEl = document.getElementById('profSubmissions');
+  subEl.innerHTML = p.submittedFiles.length ? p.submittedFiles.map(f => `
+    <div class="flex items-center gap-3 p-2 border border-gray-800 rounded bg-gray-900/50">
+      <div class="text-xl text-blue-400">📄</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium truncate">${f.name}</div>
+        <div class="text-[10px] text-gray-500">${formatDate(f.date)}</div>
+      </div>
+    </div>
+  `).join('') : '<p class="text-xs text-gray-500">No submissions yet.</p>';
+
+  // Upcoming
+  const myStats = await API.getMyStats();
+  const upEl = document.getElementById('profUpcoming');
+  if (myStats?.success && myStats.data.upcomingDeadlines.length > 0) {
+    upEl.innerHTML = myStats.data.upcomingDeadlines.slice(0, 5).map(t => `
+      <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+        <span class="text-xs font-medium truncate mr-2">${t.title}</span>
+        <span class="text-[10px] text-red-400 flex-shrink-0">${formatDate(t.deadline)}</span>
+      </div>
+    `).join('');
+  } else {
+    upEl.innerHTML = '<p class="text-xs text-gray-500">No upcoming deadlines.</p>';
+  }
+
+  // Groups
+  const myGroups = await API.getGroups();
+  const grpEl = document.getElementById('profGroups');
+  if (myGroups?.success && myGroups.data.length > 0) {
+    grpEl.innerHTML = myGroups.data.map(g => `
+      <div class="text-xs p-2 bg-gray-800/50 rounded mb-2 border border-gray-700">
+        <span class="font-medium text-purple-300">👥 ${g.name}</span>
+        <div class="text-[10px] text-gray-500 mt-1">${g.member_count} members</div>
+      </div>
+    `).join('');
+  } else {
+    grpEl.innerHTML = '<p class="text-xs text-gray-500">Not in any groups.</p>';
+  }
+
+  // Badges (Reuse achievements)
+  const ach = await API.getAchievements();
+  const bdgEl = document.getElementById('profBadges');
+  if (ach?.success) {
+    const earned = ach.data.filter(a => a.earned);
+    bdgEl.innerHTML = earned.length ? earned.map(a => `
+      <div class="bg-gray-800/50 p-2 rounded text-center border border-gray-700">
+        <div class="text-2xl">${a.icon}</div>
+        <div class="text-[10px] font-medium mt-1 truncate">${a.name}</div>
+      </div>
+    `).join('') : '<p class="text-xs text-gray-500 col-span-2">No badges yet.</p>';
+  }
+
+  // Charts
+  if (window.profWeeklyChartInstance) window.profWeeklyChartInstance.destroy();
+  window.profWeeklyChartInstance = new Chart(document.getElementById('profWeeklyChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [{ label: 'Tasks Done', data: [1, 2, 0, 3, 1, 0, 0], backgroundColor: '#6c63ff', borderRadius: 4 }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color: '#2a2f45' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+  });
+
+  if (window.profCategoryChartInstance) window.profCategoryChartInstance.destroy();
+  const catLabels = Object.keys(p.categoryPerformance);
+  const catData = catLabels.map(l => p.categoryPerformance[l].completed);
+  window.profCategoryChartInstance = new Chart(document.getElementById('profCategoryChart').getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: catLabels.length ? catLabels : ['Homework', 'Projects', 'Exams'],
+      datasets: [{ label: 'Completed', data: catData.length ? catData : [0, 0, 0], backgroundColor: 'rgba(74,222,128,0.2)', borderColor: '#4ade80', pointBackgroundColor: '#4ade80' }]
+    },
+    options: { responsive: true, scales: { r: { angleLines: { color: '#2a2f45' }, grid: { color: '#2a2f45' }, pointLabels: { color: '#9ca3af' }, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+  });
+}
+
+async function saveProfileSettings() {
+  const phone = document.getElementById('editProfPhone').value.trim();
+  const dept = document.getElementById('editProfDept').value.trim();
+  const year = document.getElementById('editProfYear').value.trim();
+  const college = document.getElementById('editProfCollege').value.trim();
+  const student_id = document.getElementById('editProfStudentId').value.trim();
+  
+  const res = await API.updateProfile({ phone, department: dept, academic_year: year, college, student_id });
+  if (res.success) {
+    alert("Profile updated successfully!");
+    loadProfile();
+  } else {
+    alert("Failed to update profile.");
+  }
+}
+
+// ── Groups ─────────────────────────────────────────────────
+async function loadGroups() {
+  document.getElementById('groupsListView').classList.remove('hidden');
+  document.getElementById('groupDetailsView').classList.add('hidden');
+
+  const data = await API.getGroups();
+  if (!data?.success) return;
+  document.getElementById('groupsList').innerHTML = data.data.length === 0
+    ? '<p class="text-gray-500 text-sm">No groups assigned.</p>'
+    : data.data.map(g => `
+      <div class="card p-4 cursor-pointer hover:border-purple-500/50 transition-colors" onclick="openGroupDetails('${g.id}', '${g.name}', '${g.project_title}', '${g.start_date}', '${g.due_date}')">
+        <div class="font-bold text-lg mb-1">👥 ${g.name}</div>
+        <div class="text-sm text-gray-400 mb-2">${g.project_title}</div>
+        <div class="text-xs text-gray-500 flex justify-between mt-4">
+          <span>By ${g.created_by}</span>
+          <span>Due: ${g.due_date}</span>
+        </div>
+      </div>
+    `).join('');
+}
+
+async function openGroupDetails(id, name, project, start, due) {
+  document.getElementById('groupsListView').classList.add('hidden');
+  document.getElementById('groupDetailsView').classList.remove('hidden');
+
+  document.getElementById('groupDetailName').innerText = name;
+  document.getElementById('groupDetailProject').innerText = project;
+  document.getElementById('groupDetailStart').innerText = start;
+  document.getElementById('groupDetailDue').innerText = due;
+
+  // Load Members
+  const membersRes = await API.getGroupMembers(id);
+  document.getElementById('groupMembersList').innerHTML = membersRes.success ? membersRes.data.map(m => `
+    <tr class="hover:bg-gray-800/30">
+      <td class="px-4 py-3 font-medium">${m.student_name}</td>
+      <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-gray-800 text-xs">${m.role}</span></td>
+      <td class="px-4 py-3 text-gray-400">${m.assigned_task}</td>
+    </tr>
+  `).join('') : '';
+
+  // Load Tasks
+  const tasksRes = await API.getGroupTasks(id);
+  document.getElementById('groupTasksList').innerHTML = tasksRes.success ? tasksRes.data.map(t => `
+    <tr class="hover:bg-gray-800/30">
+      <td class="px-4 py-3 font-medium">${t.task_title}</td>
+      <td class="px-4 py-3 text-gray-400">${t.assigned_to}</td>
+      <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${t.priority==='High'?'bg-red-900/50 text-red-400':'bg-yellow-900/50 text-yellow-400'}">${t.priority}</span></td>
+      <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${t.status==='Completed'?'bg-green-900/50 text-green-400':t.status==='In Progress'?'bg-blue-900/50 text-blue-400':'bg-gray-800 text-gray-300'}">${t.status}</span></td>
+      <td class="px-4 py-3 text-gray-400">${t.due_date}</td>
+    </tr>
+  `).join('') : '';
+
+  // Load Chat
+  const chatRes = await API.getGroupChat(id);
+  document.getElementById('groupChatList').innerHTML = chatRes.success ? chatRes.data.map(c => `
+    <div class="flex flex-col gap-1 ${c.sender === currentUser?.displayName ? 'items-end' : 'items-start'}">
+      <span class="text-[10px] text-gray-500">${c.sender} • ${c.time}</span>
+      <div class="px-3 py-2 rounded-lg text-sm max-w-[85%] ${c.sender === currentUser?.displayName ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-200'}">
+        ${c.message}
+      </div>
+    </div>
+  `).join('') : '';
+
+  // Load Files
+  const filesRes = await API.getGroupFiles(id);
+  document.getElementById('groupFilesList').innerHTML = filesRes.success ? filesRes.data.map(f => `
+    <div class="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded bg-purple-900/30 text-purple-400 flex items-center justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+        </div>
+        <div>
+          <div class="text-sm font-medium">${f.file_name}</div>
+          <div class="text-xs text-gray-500">By ${f.uploaded_by} • ${f.upload_date}</div>
+        </div>
+      </div>
+      <button class="text-gray-400 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></button>
+    </div>
+  `).join('') : '';
+}
+
+function closeGroupDetails() {
+  document.getElementById('groupsListView').classList.remove('hidden');
+  document.getElementById('groupDetailsView').classList.add('hidden');
+}
+
+// ── Student Tasks Creation ─────────────────────────────────
+async function openCreateTaskModal() { 
+  document.getElementById('createTaskModal').classList.remove('hidden'); 
+  const catSel = document.getElementById('taskCategory');
+  if (catSel && catSel.options.length <= 1) {
+    const res = await API.getCategories();
+    if(res.success && res.data.length > 0) {
+      catSel.innerHTML = '<option value="">Select Category...</option>' + 
+        res.data.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('');
+    } else {
+      // Create some default ones if empty
+      await API.createCategory('Homework');
+      await API.createCategory('Project');
+      const res2 = await API.getCategories();
+      if(res2.success) {
+         catSel.innerHTML = '<option value="">Select Category...</option>' + 
+           res2.data.map(c => `<option value="${c.id}">${c.category_name}</option>`).join('');
+      }
+    }
+  }
+}
+function closeCreateTaskModal() { document.getElementById('createTaskModal').classList.add('hidden'); }
+async function createStudentTask() {
+  const title    = document.getElementById('taskTitle').value.trim();
+  const desc     = document.getElementById('taskDesc').value.trim();
+  const priority = document.getElementById('taskPriority').value;
+  const deadline = document.getElementById('taskDeadline').value;
+  
+  const start_date = document.getElementById('taskStartDate').value;
+  const estimated_hours = parseInt(document.getElementById('taskEstHours').value || 0);
+  const repeat_type = document.getElementById('taskRepeat').value;
+  
+  const catEl = document.getElementById('taskCategory');
+  const category_id = catEl.value;
+  const category_name = catEl.options[catEl.selectedIndex]?.text || '';
+
+  const errEl    = document.getElementById('createTaskError');
+
+  if (!title || !deadline) { errEl.textContent = 'Title and deadline are required.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const data = await API.post('/tasks', { 
+    title, description: desc, priority, deadline, 
+    start_date, estimated_hours, repeat_type, category_id, category_name,
+    xp_reward: 10 
+  });
+  if (data?.success) { 
+    closeCreateTaskModal(); 
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskDesc').value = '';
+    document.getElementById('taskDeadline').value = '';
+    document.getElementById('taskStartDate').value = '';
+    document.getElementById('taskEstHours').value = '';
+    loadTasks(); 
+    loadDashboard(); 
+  }
+  else { errEl.textContent = data?.message || 'Failed to create task'; errEl.classList.remove('hidden'); }
+}
+
+// ── Events Creation ────────────────────────────────────────
+function openCreateEventModal() { document.getElementById('createEventModal').classList.remove('hidden'); }
+function closeCreateEventModal() { document.getElementById('createEventModal').classList.add('hidden'); }
+async function saveNewEvent() {
+  const title = document.getElementById('eventTitle').value.trim();
+  const date  = document.getElementById('eventDate').value;
+  const color = document.getElementById('eventColor').value;
+  const rem   = document.getElementById('eventReminder').checked;
+  const errEl = document.getElementById('createEventError');
+
+  if (!title || !date) { errEl.textContent = 'Title and date are required.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const data = await API.post('/events', { title, event_date: date, color, reminder: rem });
+  if (data?.success) { 
+    closeCreateEventModal(); 
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventDate').value = '';
+    document.getElementById('eventColor').value = '#6c63ff';
+    document.getElementById('eventReminder').checked = false;
+    loadCalendar(); 
+    checkReminders(); 
+  }
+  else { errEl.textContent = data?.message || 'Failed to create event'; errEl.classList.remove('hidden'); }
+}
+
+async function checkReminders() {
+  const data = await API.get('/events');
+  if (!data?.success) return;
+  const now = new Date();
+  
+  // Find events with reminders that are upcoming in the next 24 hours
+  const upcomingReminders = data.data.filter(e => {
+    if (!e.reminder) return false;
+    const evtDate = new Date(e.event_date);
+    const diffHours = (evtDate - now) / (1000 * 60 * 60);
+    return diffHours > 0 && diffHours <= 24;
+  });
+
+  if (upcomingReminders.length > 0) {
+    const list = document.getElementById('notifList');
+    upcomingReminders.forEach(e => {
+      // Check if we already rendered this notification to avoid duplicates in UI
+      const notifId = 'rem_' + e.id;
+      if (!document.getElementById(notifId)) {
+        const html = `
+          <div id="${notifId}" class="text-xs p-2 rounded border border-purple-800 bg-purple-900 bg-opacity-20">
+            <div class="font-medium text-purple-300 mb-0.5">Reminder: ${e.title}</div>
+            <div class="text-gray-400">Upcoming on ${formatDate(e.event_date)}</div>
+          </div>
+        `;
+        list.insertAdjacentHTML('afterbegin', html);
+      }
+    });
+    const badge = document.getElementById('notifBadge');
+    badge.textContent = parseInt(badge.textContent || 0) + upcomingReminders.length;
+    badge.classList.remove('hidden');
+  }
+}
+
+// ── Account Management ─────────────────────────────────────
+async function deleteAccount() {
+  const confirmDelete = confirm("Are you sure you want to PERMANENTLY delete your account? This action cannot be undone and will erase all your tasks, stats, and profile data.");
+  if (!confirmDelete) return;
+
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+
+  try {
+    // Delete user document from Firestore
+    await db.collection('users').doc(user.uid).delete();
+    
+    // Delete the auth account
+    await user.delete();
+    
+    alert("Your account has been deleted permanently.");
+    window.location.assign('index.html');
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    if (error.code === 'auth/requires-recent-login') {
+      alert("For security reasons, you need to log in again before deleting your account. Please log out and log back in, then try again.");
+    } else {
+      alert("Error deleting account: " + error.message);
+    }
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────
+// Intentionally left blank, initialization now happens inside requireAuth callback.
+</script>
+</body>
+</html>
