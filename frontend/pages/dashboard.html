@@ -1052,7 +1052,7 @@ async function deleteAccount() {
     await user.delete();
     
     alert("Your account has been deleted permanently.");
-    window.location.assign('index.html');
+    window.location.assign('/');
   } catch (error) {
     console.error("Error deleting account:", error);
     if (error.code === 'auth/requires-recent-login') {

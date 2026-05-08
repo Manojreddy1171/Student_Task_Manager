@@ -141,7 +141,7 @@ function showVerificationUI(user) {
     checkBtn.innerText = 'Checking...';
     user.reload().then(() => {
       if (firebase.auth().currentUser.emailVerified) {
-        window.location.assign('dashboard.html');
+        window.location.assign('/dashboard');
       } else {
         checkBtn.innerText = 'Not verified yet. Check again';
         setTimeout(() => { checkBtn.innerText = 'I have verified my email'; }, 3000);
@@ -174,7 +174,7 @@ const uiConfig = {
         return false; // Prevent redirect
       }
 
-      window.location.assign('dashboard.html');
+      window.location.assign('/dashboard');
       return false; 
     },
     uiShown: function() {

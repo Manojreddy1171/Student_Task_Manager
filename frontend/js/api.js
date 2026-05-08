@@ -2,7 +2,7 @@
 
 function logout() {
   firebase.auth().signOut().then(() => {
-    window.location.href = 'index.html';
+    window.location.href = '/';
   });
 }
 
@@ -11,7 +11,7 @@ function logout() {
 function requireAuth(role = null, callback) {
   firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
-      window.location.href = 'index.html';
+      window.location.href = '/';
       return;
     }
     
@@ -19,7 +19,7 @@ function requireAuth(role = null, callback) {
     if (!user.emailVerified) {
       alert("Please verify your email address to access the dashboard. Check your spam folder if you didn't receive it.");
       firebase.auth().signOut().then(() => {
-        window.location.href = 'index.html';
+        window.location.href = '/';
       });
       return;
     }
@@ -56,7 +56,7 @@ function requireAuth(role = null, callback) {
     
     // Check role based authorization
     if (role && userProfile.role !== role && !(role === 'admin' && userProfile.role === 'superadmin')) {
-      window.location.href = 'index.html';
+      window.location.href = '/';
       return;
     }
     
