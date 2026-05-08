@@ -5,6 +5,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const compression = require('compression');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +33,7 @@ io.on('connection', (socket) => {
 });
 
 // ── Middleware ────────────────────────────────────────────
+app.use(compression()); // Compress all routes
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -51,7 +53,9 @@ app.use('/api/events',        require('./routes/events'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
 // ── Serve Frontend ─────────────────────────────────────────
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../frontend'), {
+  maxAge: '1d' // Cache files in browser for 1 day to speed up load times
+}));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/pages', 'index.html'));
