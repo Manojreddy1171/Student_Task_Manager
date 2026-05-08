@@ -87,6 +87,17 @@
         Sign out
       </button>
     </div>
+
+    <!-- Success UI (Hidden by default) -->
+    <div id="success-ui" style="display: none; text-align: center; padding: 20px 0;">
+      <div style="margin-bottom: 16px; color: #4caf50;">
+        <svg style="margin: 0 auto; width: 64px; height: 64px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+      <h2 style="font-size: 1.5rem; font-weight: 700; color: #e8eaf6; margin-bottom: 8px;">Sign In Successful!</h2>
+      <p style="font-size: 0.875rem; color: #8b90a7; margin-bottom: 24px;">
+        Redirecting to your dashboard...
+      </p>
+    </div>
   </div>
 
   <p class="text-center text-xs mt-6" style="color:#4a4e6b;">
@@ -141,7 +152,11 @@ function showVerificationUI(user) {
     checkBtn.innerText = 'Checking...';
     user.reload().then(() => {
       if (firebase.auth().currentUser.emailVerified) {
-        window.location.assign('/dashboard');
+        document.getElementById('verification-ui').style.display = 'none';
+        document.getElementById('success-ui').style.display = 'block';
+        setTimeout(() => {
+          window.location.assign('/dashboard');
+        }, 1500);
       } else {
         checkBtn.innerText = 'Not verified yet. Check again';
         setTimeout(() => { checkBtn.innerText = 'I have verified my email'; }, 3000);
@@ -174,7 +189,14 @@ const uiConfig = {
         return false; // Prevent redirect
       }
 
-      window.location.assign('/dashboard');
+      document.getElementById('firebaseui-auth-container').style.display = 'none';
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('success-ui').style.display = 'block';
+
+      setTimeout(() => {
+        window.location.assign('/dashboard');
+      }, 1500);
+
       return false; 
     },
     uiShown: function() {
