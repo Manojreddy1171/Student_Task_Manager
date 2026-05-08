@@ -43,10 +43,13 @@
 <body class="flex h-screen overflow-hidden">
 
 <!-- Sidebar -->
-<div class="sidebar w-56 flex flex-col flex-shrink-0">
-  <div class="p-5 border-b border-gray-800">
-    <div class="mono text-sm font-bold text-purple-400">TaskAcademy</div>
-    <div class="text-xs text-gray-500 mt-1 tracking-widest">STUDENT</div>
+<div id="sidebar" class="sidebar w-56 flex flex-col flex-shrink-0 absolute inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-200 md:relative md:translate-x-0">
+  <div class="p-5 border-b border-gray-800 flex justify-between items-center">
+    <div>
+      <div class="mono text-sm font-bold text-purple-400">TaskAcademy</div>
+      <div class="text-xs text-gray-500 mt-1 tracking-widest">STUDENT</div>
+    </div>
+    <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white text-lg">✕</button>
   </div>
   <nav class="flex-1 py-3 overflow-y-auto">
     <div class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</div>
@@ -70,8 +73,13 @@
 <!-- Main Content -->
 <div class="flex-1 overflow-y-auto flex flex-col">
   <!-- Topbar -->
-  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900 sticky top-0 z-10">
-    <h1 id="pageTitle" class="text-base font-semibold">Dashboard</h1>
+  <div class="flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-800 bg-gray-900 sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white mr-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+      <h1 id="pageTitle" class="text-base font-semibold">Dashboard</h1>
+    </div>
     <div class="flex items-center gap-3">
       <button onclick="toggleNotifs()" class="relative text-gray-400 hover:text-white">
         🔔 <span id="notifBadge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center text-white hidden">0</span>
@@ -84,7 +92,7 @@
 
     <!-- DASHBOARD PAGE -->
     <div id="page-dashboard">
-      <div class="grid grid-cols-5 gap-3 mb-5">
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-5">
         <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-total" class="mono text-2xl text-blue-300">—</div></div>
         <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
         <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending</div><div id="stat-pending" class="mono text-2xl text-yellow-400">—</div></div>
@@ -92,7 +100,7 @@
         <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Productivity</div><div id="stat-prod" class="mono text-2xl text-purple-400">—</div></div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="card p-4">
           <div class="flex justify-between items-center mb-3">
             <span class="text-sm font-semibold">Upcoming Deadlines</span>
@@ -112,8 +120,8 @@
         <h2 class="font-semibold text-lg">My Tasks</h2>
         <button onclick="openCreateTaskModal()" class="btn btn-primary text-xs">+ Create Task</button>
       </div>
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex gap-2">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
           <select id="filterStatus" onchange="loadTasks()" class="text-xs py-2 px-3 w-auto">
             <option value="">All Status</option>
             <option value="pending">Pending</option>
@@ -127,14 +135,14 @@
             <option value="low">Low</option>
           </select>
         </div>
-        <input id="searchTasks" placeholder="Search tasks..." onkeyup="loadTasks()" class="w-48 text-xs py-2">
+        <input id="searchTasks" placeholder="Search tasks..." onkeyup="loadTasks()" class="w-full sm:w-48 text-xs py-2">
       </div>
       <div id="tasksList" class="space-y-2">Loading...</div>
     </div>
 
     <!-- ACHIEVEMENTS PAGE -->
     <div id="page-achievements" class="hidden">
-      <div id="achievementsGrid" class="grid grid-cols-3 gap-4">Loading...</div>
+      <div id="achievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">Loading...</div>
     </div>
 
     <!-- LEADERBOARD PAGE -->
@@ -509,6 +517,11 @@ function showPage(name) {
   if (name === 'calendar')     loadCalendar();
   if (name === 'groups')       loadGroups();
   if (name === 'profile')      loadProfile();
+
+  // Close sidebar on mobile after navigating
+  if (window.innerWidth < 768) {
+    document.getElementById('sidebar').classList.add('-translate-x-full');
+  }
 }
 
 // ── Dashboard ──────────────────────────────────────────────
@@ -1065,6 +1078,11 @@ async function deleteAccount() {
 
 // ── Init ───────────────────────────────────────────────────
 // Intentionally left blank, initialization now happens inside requireAuth callback.
+
+// ── Mobile UI ──────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('-translate-x-full');
+}
 </script>
 </body>
 </html>
