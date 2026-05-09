@@ -74,7 +74,28 @@
       display: block;
     }
   }
-</style>
+
+  /* Two Column Layout */
+  .two-col { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+  @media (max-width: 1280px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* Widget Header Styling */
+  .card-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+
+  .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); }
+  .card-action { font-size: 10px; color: var(--accent); cursor: pointer; font-weight: 600; }
+  .card-action:hover { text-decoration: underline; }
+
+  /* Activity Feed Styles */
+  .activity-item { display: flex; gap: 12px; padding: 12px 16px; transition: background 0.2s; }
+  .activity-item:hover { background: var(--bg3); }
+  .activity-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .activity-content { flex: 1; }
+  .activity-title { font-size: 12px; font-weight: 500; color: var(--text); }
+  .activity-meta { font-size: 10px; color: var(--text2); margin-top: 2px; }
+
 </head>
 <body class="flex h-screen overflow-hidden">
 
@@ -128,17 +149,57 @@
         <div class="card stat-card green p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
         <div class="card stat-card amber p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completion Rate</div><div id="stat-rate" class="mono text-2xl text-yellow-400">—</div></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="card p-4">
-          <div class="text-sm font-semibold mb-3">Top Performers</div>
-          <div id="topPerformers"></div>
+
+      <div class="two-col">
+        <!-- Main Column -->
+        <div class="flex flex-col gap-4">
+          <div class="card p-4">
+            <div class="text-sm font-semibold mb-3">Tasks by Priority</div>
+            <div class="h-64">
+              <canvas id="priorityChart"></canvas>
+            </div>
+          </div>
+          <div class="card p-4">
+            <div class="text-sm font-semibold mb-3">Top Performers</div>
+            <div id="topPerformers"></div>
+          </div>
         </div>
-        <div class="card p-4">
-          <div class="text-sm font-semibold mb-3">Tasks by Priority</div>
-          <canvas id="priorityChart" height="180"></canvas>
+
+        <!-- Side Column -->
+        <div class="flex flex-col gap-4">
+          <!-- Recent Activity Widget -->
+          <div class="card overflow-hidden">
+            <div class="card-header">
+              <span class="card-title">Recent Activity</span>
+              <span class="card-action">View Log</span>
+            </div>
+            <div id="adminRecentActivity" class="divide-y divide-gray-800/50">
+              <div class="p-4 text-xs text-gray-500 text-center">Loading activity...</div>
+            </div>
+          </div>
+
+          <!-- System Status Widget -->
+          <div class="card p-4">
+            <div class="text-xs text-gray-500 uppercase tracking-widest mb-3">System Status</div>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span>API Server</span>
+                <span class="text-green-400 flex items-center gap-1"><span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Online</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span>Database</span>
+                <span class="text-green-400 flex items-center gap-1"><span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Stable</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span>Storage</span>
+                <span class="text-blue-300">82% Used</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
 
     <!-- TASKS -->
     <div id="page-tasks" class="hidden">
@@ -264,26 +325,71 @@ async function loadOverview() {
   document.getElementById('stat-done').textContent     = d.completedTasks;
   document.getElementById('stat-rate').textContent     = d.completionRate + '%';
 
-  document.getElementById('topPerformers').innerHTML = d.completionByUser.slice(0,5).map((u, i) => `
-    <div class="flex items-center gap-2 py-1.5 border-b border-gray-800 text-sm">
-      <span class="text-gray-500 w-5">${i+1}.</span>
-      <span class="flex-1">${u.name}</span>
-      <span class="text-green-400 text-xs mono">${u.completed} done</span>
-    </div>
-  `).join('');
+  const performers = document.getElementById('topPerformers');
+  if (d.completionByUser.length === 0) {
+    performers.innerHTML = '<div class="text-xs text-gray-500 py-4 text-center">No student data yet.</div>';
+  } else {
+    performers.innerHTML = d.completionByUser.slice(0,5).map((u, i) => `
+      <div class="flex items-center gap-3 py-2 border-b border-gray-800 text-sm">
+        <span class="text-gray-500 w-5 font-mono text-[10px]">${i+1}</span>
+        <div class="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 font-bold">${u.name.charAt(0)}</div>
+        <span class="flex-1">${u.name}</span>
+        <span class="text-green-400 text-xs mono font-bold">${u.completed} done</span>
+      </div>
+    `).join('');
+  }
+
+  renderAdminActivity();
 
   const ctx = document.getElementById('priorityChart').getContext('2d');
   const priorities = ['high','medium','low'];
   const counts = priorities.map(p => d.tasksByPriority.find(x=>x.priority===p)?.count || 0);
-  new Chart(ctx, {
+  
+  if (window.adminPriorityChart) window.adminPriorityChart.destroy();
+  window.adminPriorityChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['High', 'Medium', 'Low'],
-      datasets: [{ data: counts, backgroundColor: ['#f87171','#fbbf24','#4ade80'], borderRadius: 6 }]
+      datasets: [{ 
+        label: 'Tasks',
+        data: counts, 
+        backgroundColor: ['#f87171','#fbbf24','#4ade80'], 
+        borderRadius: 8,
+        barThickness: 32
+      }]
     },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#9ca3af' } }, x: { ticks: { color: '#9ca3af' } } } }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }, 
+      scales: { 
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b90a7', font: { size: 10 } } }, 
+        x: { grid: { display: false }, ticks: { color: '#8b90a7', font: { size: 10 } } } 
+      } 
+    }
   });
 }
+
+function renderAdminActivity() {
+  const container = document.getElementById('adminRecentActivity');
+  // Mocking activity since we don't have a global log yet
+  const activities = [
+    { type: 'task', title: 'New Task Created', student: 'Web Dev Project', time: '2m ago', color: 'var(--accent2)' },
+    { type: 'student', title: 'Student Joined', student: 'Sarah Connor', time: '15m ago', color: 'var(--green)' },
+    { type: 'completion', title: 'Task Completed', student: 'John Doe', time: '1h ago', color: 'var(--amber)' }
+  ];
+
+  container.innerHTML = activities.map(a => `
+    <div class="activity-item">
+      <div class="activity-dot" style="background:${a.color}"></div>
+      <div class="activity-content">
+        <div class="activity-title">${a.title}</div>
+        <div class="activity-meta">${a.student} • ${a.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
 
 // ── Admin Tasks ────────────────────────────────────────────
 async function loadAdminTasks() {

@@ -93,6 +93,17 @@
   .notif-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
   .notif-time { font-size: 10px; color: var(--text2); }
 
+  /* Gamification Styles */
+  .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .badge { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; font-size: 10px; color: var(--text); }
+  .badge-icon { font-size: 12px; }
+  .streak-row { display: flex; justify-content: space-between; gap: 4px; }
+  .streak-day { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; border-radius: 4px; background: var(--bg3); color: var(--text2); border: 1px solid transparent; }
+  .streak-day.filled { background: rgba(108,99,255,.2); color: var(--accent); border-color: rgba(108,99,255,.3); }
+  .streak-day.today { border: 1px solid var(--accent); color: var(--accent); position: relative; }
+  .streak-day.today::after { content: ''; position: absolute; top: -2px; right: -2px; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+
+
 
   /* Mobile Responsive Sidebar */
   @media (max-width: 1023px) {
@@ -208,7 +219,37 @@
 
         <!-- Side Column (Widgets) -->
         <div class="flex flex-col gap-4">
+          <!-- Gamification Card -->
+          <div class="card p-4">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm font-semibold">Level <span id="userLevel">1</span></span>
+              <span class="text-[10px] font-mono text-accent" id="xpText">250/500 XP</span>
+            </div>
+            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-4">
+              <div id="xpBar" class="h-full bg-gradient-to-r from-purple-500 to-blue-400" style="width: 50%"></div>
+            </div>
+            
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Weekly Streak</div>
+            <div class="streak-row mb-4" id="streakRow">
+              <div class="streak-day filled">M</div>
+              <div class="streak-day filled">T</div>
+              <div class="streak-day today">W</div>
+              <div class="streak-day">T</div>
+              <div class="streak-day">F</div>
+              <div class="streak-day">S</div>
+              <div class="streak-day">S</div>
+            </div>
+
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Recent Badges</div>
+            <div class="badge-row" id="badgeRow">
+              <div class="badge"><span class="badge-icon">🔥</span> Quick Learner</div>
+              <div class="badge"><span class="badge-icon">🎯</span> Task Master</div>
+              <div class="badge"><span class="badge-icon">⚡</span> 3 Day Streak</div>
+            </div>
+          </div>
+
           <!-- Leaderboard Widget -->
+
           <div class="card overflow-hidden">
             <div class="card-header">
               <span class="card-title">Top Students</span>
@@ -679,6 +720,7 @@ async function loadDashboard() {
   renderDashboardLeaderboard(d.leaderboard);
   renderDashboardCalendar();
   renderDashboardNotifs();
+  renderGamification(d);
 
   // Upcoming deadlines
   const ul = document.getElementById('upcomingList');
@@ -1335,6 +1377,36 @@ async function deleteAccount() {
 
 // ── Init ───────────────────────────────────────────────────
 // Intentionally left blank, initialization now happens inside requireAuth callback.
+function renderGamification(data) {
+  const xp = data.xp_points || 0;
+  const level = Math.floor(xp / 500) + 1;
+  const currentXP = xp % 500;
+  const progress = (currentXP / 500) * 100;
+  
+  const lvlEl = document.getElementById('userLevel');
+  const xpTEl = document.getElementById('xpText');
+  const xpBEl = document.getElementById('xpBar');
+  
+  if(lvlEl) lvlEl.textContent = level;
+  if(xpTEl) xpTEl.textContent = `${currentXP}/500 XP`;
+  if(xpBEl) xpBEl.style.width = `${progress}%`;
+  
+  // Mock Streak Logic
+  const streakRow = document.getElementById('streakRow');
+  if(streakRow) {
+    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const now = new Date();
+    const todayIdx = (now.getDay() + 6) % 7; // Monday is 0
+    
+    streakRow.innerHTML = days.map((d, i) => {
+      let cls = 'streak-day';
+      if (i < todayIdx) cls += ' filled';
+      if (i === todayIdx) cls += ' today';
+      return `<div class="${cls}">${d}</div>`;
+    }).join('');
+  }
+}
 </script>
+
 </body>
 </html>
