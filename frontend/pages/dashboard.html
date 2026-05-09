@@ -60,6 +60,40 @@
   .rank.silver { color: #94a3b8; }
   .rank.bronze { color: #cd7c4a; }
 
+  /* Dashboard Two-Column Layout */
+  .two-col { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+  @media (max-width: 1280px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .card-action { font-size: 12px; color: var(--accent); cursor: pointer; }
+  
+  /* Leaderboard Widget */
+  .leaderboard-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; transition: background 0.2s; }
+  .leaderboard-item:hover { background: var(--bg3); }
+  .rank { font-family: 'Space Mono', monospace; font-weight: 700; width: 20px; font-size: 14px; }
+  .lb-avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+  .lb-name { flex: 1; font-size: 13px; color: var(--text); }
+  .lb-points { font-size: 12px; color: var(--text2); font-family: 'Space Mono', monospace; }
+
+  /* Calendar Widget */
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 16px; }
+  .cal-header { font-size: 10px; color: var(--text2); text-align: center; font-weight: 600; padding-bottom: 8px; }
+  .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text2); border-radius: 6px; cursor: pointer; }
+  .cal-day:hover { background: var(--bg3); color: var(--text); }
+  .cal-day.today { background: var(--accent); color: white; }
+  .cal-day.has-event { position: relative; color: var(--text); font-weight: 600; }
+  .cal-day.has-event::after { content: ''; position: absolute; bottom: 4px; width: 3px; height: 3px; border-radius: 50%; background: var(--accent); }
+
+  /* Notifications Widget */
+  .notif-item { display: flex; gap: 12px; align-items: flex-start; }
+  .notif-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .notif-content { flex: 1; }
+  .notif-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .notif-time { font-size: 10px; color: var(--text2); }
+
+
   /* Mobile Responsive Sidebar */
   @media (max-width: 1023px) {
     .sidebar {
@@ -151,23 +185,66 @@
         <div class="card stat-card purple p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Productivity</div><div id="stat-prod" class="mono text-2xl" style="color:var(--accent)">—</div></div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="card p-4">
-          <div class="flex justify-between items-center mb-3">
-            <span class="text-sm font-semibold">Upcoming Deadlines</span>
+      <div class="two-col">
+        <!-- Main Column -->
+        <div class="flex flex-col gap-4">
+          <div class="card p-4">
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-sm font-semibold">Upcoming Deadlines</span>
+              <button onclick="navigate('tasks')" class="text-xs text-accent">View All</button>
+            </div>
+            <div id="upcomingList" class="space-y-2 text-sm text-gray-400">Loading...</div>
           </div>
-          <div id="upcomingList" class="space-y-2 text-sm text-gray-400">Loading...</div>
+          
+          <div class="card p-4">
+            <div class="text-sm font-semibold mb-4">Task Progress</div>
+            <div class="flex justify-center items-center h-56">
+              <div class="w-full max-w-[200px]">
+                <canvas id="progressChart"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card p-4">
-          <div class="text-sm font-semibold mb-3">Task Progress</div>
-          <div class="flex justify-center items-center h-48">
-            <div class="w-full max-w-[180px]">
-              <canvas id="progressChart"></canvas>
+
+        <!-- Side Column (Widgets) -->
+        <div class="flex flex-col gap-4">
+          <!-- Leaderboard Widget -->
+          <div class="card overflow-hidden">
+            <div class="card-header">
+              <span class="card-title">Top Students</span>
+              <span onclick="navigate('leaderboard')" class="card-action">Full view</span>
+            </div>
+            <div id="dashboardLeaderboard" class="divide-y divide-gray-800/50">
+              <div class="p-4 text-xs text-gray-500 text-center">Loading leaderboard...</div>
+            </div>
+          </div>
+
+          <!-- Calendar Widget -->
+          <div class="card overflow-hidden">
+            <div class="card-header">
+              <span id="cal-month-year" class="card-title">May 2026</span>
+              <span onclick="navigate('calendar')" class="card-action">Full view</span>
+            </div>
+            <div class="calendar-grid" id="dashboardCalendar">
+              <div class="cal-header">Su</div><div class="cal-header">Mo</div><div class="cal-header">Tu</div><div class="cal-header">We</div><div class="cal-header">Th</div><div class="cal-header">Fr</div><div class="cal-header">Sa</div>
+              <!-- Days loaded via JS -->
+            </div>
+          </div>
+
+          <!-- Notifications Widget -->
+          <div class="card overflow-hidden">
+            <div class="card-header">
+              <span class="card-title">Recent Alerts</span>
+              <span class="card-action" onclick="navigate('notifications')">See all</span>
+            </div>
+            <div id="dashboardNotifs" class="p-4 space-y-4">
+              <div class="text-xs text-gray-500 text-center">Loading alerts...</div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
 
     <!-- TASKS PAGE -->
     <div id="page-tasks" class="hidden">
@@ -598,9 +675,14 @@ async function loadDashboard() {
   document.getElementById('userXP').textContent       = `${d.xp_points} XP · Rank #${d.myRank}`;
   document.getElementById('tasksCount').textContent   = d.pendingTasks || '';
 
+  // Dashboard Widgets
+  renderDashboardLeaderboard(d.leaderboard);
+  renderDashboardCalendar();
+  renderDashboardNotifs();
+
   // Upcoming deadlines
   const ul = document.getElementById('upcomingList');
-  if (d.upcomingDeadlines.length === 0) { ul.innerHTML = '<p class="text-gray-600">No upcoming deadlines 🎉</p>'; }
+  if (d.upcomingDeadlines.length === 0) { ul.innerHTML = '<p class="text-gray-600 text-xs text-center py-4">No upcoming deadlines 🎉</p>'; }
   else {
     ul.innerHTML = d.upcomingDeadlines.map(t => `
       <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-800/30 border border-transparent hover:border-gray-700 transition-all">
@@ -615,9 +697,7 @@ async function loadDashboard() {
   }
 
   // Donut chart
-  if (window.progressChartInstance) {
-    window.progressChartInstance.destroy();
-  }
+  if (window.progressChartInstance) window.progressChartInstance.destroy();
   const ctx = document.getElementById('progressChart').getContext('2d');
   window.progressChartInstance = new Chart(ctx, {
     type: 'doughnut',
@@ -634,28 +714,89 @@ async function loadDashboard() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#8b90a7',
-            boxWidth: 12,
-            font: { size: 10 }
-          }
-        },
-        tooltip: {
-          backgroundColor: '#1e2233',
-          titleColor: '#e8eaf6',
-          bodyColor: '#e8eaf6',
-          borderColor: '#2a2f45',
-          borderWidth: 1,
-          padding: 10,
-          displayColors: true
-        }
+        legend: { position: 'bottom', labels: { color: '#8b90a7', boxWidth: 12, font: { size: 10 } } },
+        tooltip: { backgroundColor: '#1e2233', titleColor: '#e8eaf6', bodyColor: '#e8eaf6', borderColor: '#2a2f45', borderWidth: 1, padding: 10, displayColors: true }
       },
       cutout: '75%'
     }
   });
 }
+
+function renderDashboardLeaderboard(users) {
+  const container = document.getElementById('dashboardLeaderboard');
+  const ranks = ['gold', 'silver', 'bronze'];
+  const rankColors = ['#fbbf24', '#94a3b8', '#cd7c4a'];
+  
+  const top5 = (users || []).slice(0, 5);
+  container.innerHTML = top5.map((u, i) => {
+    const isMe = u.id === currentUser?.id;
+    const rankClass = ranks[i] || '';
+    const avatarColor = rankColors[i] || '#6c63ff';
+    const initials = (u.name || 'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    
+    return `
+      <div class="leaderboard-item ${isMe ? 'bg-purple-950/20' : ''}">
+        <div class="rank ${rankClass}">${i + 1}</div>
+        <div class="lb-avatar" style="background:${avatarColor}22; color:${avatarColor}; border:1px solid ${avatarColor}44">
+          ${initials}
+        </div>
+        <div class="lb-name truncate ${isMe ? 'font-semibold text-purple-300' : ''}">${u.name} ${isMe ? '(you)' : ''}</div>
+        <div class="lb-points">${(u.xp_points || 0).toLocaleString()}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDashboardCalendar() {
+  const container = document.getElementById('dashboardCalendar');
+  const monthLabel = document.getElementById('cal-month-year');
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  monthLabel.textContent = `${monthNames[month]} ${year}`;
+  
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  let html = '<div class="cal-header">Su</div><div class="cal-header">Mo</div><div class="cal-header">Tu</div><div class="cal-header">We</div><div class="cal-header">Th</div><div class="cal-header">Fr</div><div class="cal-header">Sa</div>';
+  
+  // Empty days
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="cal-day opacity-0"></div>';
+  }
+  
+  // Actual days
+  const today = now.getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === today;
+    html += `<div class="cal-day ${isToday ? 'today' : ''}">${d}</div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+async function renderDashboardNotifs() {
+  const container = document.getElementById('dashboardNotifs');
+  const res = await API.getNotifs();
+  if (!res.success || res.data.length === 0) {
+    container.innerHTML = '<div class="text-xs text-gray-500 text-center py-2">No new alerts.</div>';
+    return;
+  }
+  
+  const latest = res.data.slice(0, 3);
+  container.innerHTML = latest.map(n => `
+    <div class="notif-item">
+      <div class="notif-dot" style="background:${n.priority === 'high' ? 'var(--red)' : 'var(--accent)'}"></div>
+      <div class="notif-content">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-time">${n.message.substring(0, 40)}${n.message.length > 40 ? '...' : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
 
 // ── Tasks ──────────────────────────────────────────────────
 async function loadTasks() {
