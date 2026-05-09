@@ -440,18 +440,23 @@ function formatDate(dt) {
 // Priority badge HTML
 function priorityBadge(p) {
   const pLower = (p || '').toLowerCase();
-  const map = { urgent: 'bg-red-600 text-white', high: 'bg-red-900 text-red-300', medium: 'bg-yellow-900 text-yellow-300', low: 'bg-green-900 text-green-300' };
-  return `<span class="text-xs px-2 py-1 rounded-full font-medium ${map[pLower] || 'bg-gray-800 text-gray-400'}">${p || 'None'}</span>`;
+  const map = { 
+    urgent: 'background: rgba(248,113,113,.15); color: #f87171;', 
+    high: 'background: rgba(248,113,113,.1); color: #f87171;', 
+    medium: 'background: rgba(251,191,36,.1); color: #fbbf24;', 
+    low: 'background: rgba(74,222,128,.1); color: #4ade80;' 
+  };
+  return `<span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider" style="${map[pLower] || 'background: rgba(139,144,167,.1); color: #8b90a7;'}">${p || 'None'}</span>`;
 }
 
 // Status badge HTML
 function statusBadge(s) {
   const sLower = (s || '').toLowerCase().replace(' ', '_');
   const map = {
-    pending: 'bg-gray-800 text-gray-300',
-    in_progress: 'bg-blue-900 text-blue-300',
-    completed: 'bg-green-900 text-green-300',
-    overdue: 'bg-red-900 text-red-300'
+    pending: 'background: rgba(139,144,167,.1); color: #8b90a7;',
+    in_progress: 'background: rgba(79,195,247,.1); color: #4fc3f7;',
+    completed: 'background: rgba(74,222,128,.1); color: #4ade80;',
+    overdue: 'background: rgba(248,113,113,.1); color: #f87171;'
   };
-  return `<span class="text-xs px-2 py-1 rounded-full font-medium ${map[sLower] || 'bg-gray-800 text-gray-400'}">${(s || 'Pending').replace('_', ' ')}</span>`;
+  return `<span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider" style="${map[sLower] || 'background: rgba(139,144,167,.1); color: #8b90a7;'}">${(s || 'Pending').replace('_', ' ')}</span>`;
 }

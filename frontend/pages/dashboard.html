@@ -13,31 +13,52 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <style>
-  body { font-family: 'DM Sans', sans-serif; background: #0f1117; color: #e8eaf6; }
+  :root {
+    --bg: #0f1117; --bg2: #171b26; --bg3: #1e2233; --border: #2a2f45;
+    --text: #e8eaf6; --text2: #8b90a7; --accent: #6c63ff; --accent2: #4fc3f7;
+    --green: #4ade80; --amber: #fbbf24; --red: #f87171; --pink: #f472b6;
+    --card-bg: #171b26; --badge-bg: #252a3d;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
   .mono { font-family: 'Space Mono', monospace; }
-  .sidebar { background: #171b26; border-right: 1px solid #2a2f45; }
-  .card { background: #171b26; border: 1px solid #2a2f45; border-radius: 12px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: #8b90a7; cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
-  .nav-item:hover { color: #e8eaf6; background: #1e2233; }
-  .nav-item.active { color: #6c63ff; border-left-color: #6c63ff; background: rgba(108,99,255,.08); }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; }
+  
+  /* Premium Stat Cards */
+  .stat-card { position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 0 0 60px; opacity: .08; }
+  .stat-card.blue::before { background: var(--accent2); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.amber::before { background: var(--amber); }
+  .stat-card.pink::before { background: var(--pink); }
+  .stat-card.purple::before { background: var(--accent); }
+
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: var(--text2); cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(108,99,255,.08); }
   .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
-  .p-high { background: rgba(248,113,113,.15); color: #f87171; }
-  .p-med  { background: rgba(251,191,36,.15);  color: #fbbf24; }
-  .p-low  { background: rgba(74,222,128,.15);  color: #4ade80; }
-  .xp-bar { height: 6px; border-radius: 3px; background: #1e2233; overflow: hidden; }
-  .xp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6c63ff, #4fc3f7); transition: width .5s ease; }
+  .p-high { background: rgba(248,113,113,.15); color: var(--red); }
+  .p-med  { background: rgba(251,191,36,.15);  color: var(--amber); }
+  .p-low  { background: rgba(74,222,128,.15);  color: var(--green); }
+  .xp-bar { height: 6px; border-radius: 3px; background: var(--bg3); overflow: hidden; }
+  .xp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .5s ease; }
   .modal-bg { background: rgba(0,0,0,.7); }
-  input, select, textarea { background: #1e2233; border: 1px solid rgba(255,255,255,0.1); color: #e8eaf6; border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #6c63ff; }
+  input, select, textarea { background: var(--bg3); border: 1px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
   input[type="color"] { -webkit-appearance: none; appearance: none; padding: 0; height: 38px; width: 48px; flex-shrink: 0; cursor: pointer; }
   input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
   input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
   input[type="color"]::-moz-color-swatch { border: none; border-radius: 6px; }
   .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
-  .btn-primary { background: #6c63ff; color: white; }
+  .btn-primary { background: var(--accent); color: white; }
   .btn-primary:hover { background: #5a52e0; }
-  .btn-ghost { background: transparent; color: #8b90a7; border: 1px solid #2a2f45; }
-  .btn-ghost:hover { background: #1e2233; color: #e8eaf6; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+
+  /* Leaderboard Ranks */
+  .rank.gold { color: var(--amber); }
+  .rank.silver { color: #94a3b8; }
+  .rank.bronze { color: #cd7c4a; }
 
   /* Mobile Responsive Sidebar */
   @media (max-width: 1023px) {
@@ -74,9 +95,12 @@
 <!-- Sidebar -->
 <div id="mainSidebar" class="sidebar w-64 flex flex-col flex-shrink-0">
   <div class="p-5 border-b border-gray-800 flex justify-between items-center">
-    <div>
-      <div class="mono text-sm font-bold text-purple-400">TaskAcademy</div>
-      <div class="text-xs text-gray-500 mt-1 tracking-widest">STUDENT</div>
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center text-lg">🚀</div>
+      <div>
+        <div class="mono text-sm font-bold text-white">TaskAcademy</div>
+        <div class="text-[10px] text-gray-500 tracking-widest uppercase">Student Portal</div>
+      </div>
     </div>
     <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">✕</button>
   </div>
@@ -124,11 +148,11 @@
     <!-- DASHBOARD PAGE -->
     <div id="page-dashboard">
       <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-5">
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-total" class="mono text-2xl text-blue-300">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending</div><div id="stat-pending" class="mono text-2xl text-yellow-400">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">My XP</div><div id="stat-xp" class="mono text-2xl text-pink-400">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Productivity</div><div id="stat-prod" class="mono text-2xl text-purple-400">—</div></div>
+        <div class="card stat-card blue p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-total" class="mono text-2xl" style="color:var(--accent2)">—</div></div>
+        <div class="card stat-card green p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl" style="color:var(--green)">—</div></div>
+        <div class="card stat-card amber p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending</div><div id="stat-pending" class="mono text-2xl" style="color:var(--amber)">—</div></div>
+        <div class="card stat-card pink p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">My XP</div><div id="stat-xp" class="mono text-2xl" style="color:var(--pink)">—</div></div>
+        <div class="card stat-card purple p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Productivity</div><div id="stat-prod" class="mono text-2xl" style="color:var(--accent)">—</div></div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -583,9 +607,13 @@ async function loadDashboard() {
   if (d.upcomingDeadlines.length === 0) { ul.innerHTML = '<p class="text-gray-600">No upcoming deadlines 🎉</p>'; }
   else {
     ul.innerHTML = d.upcomingDeadlines.map(t => `
-      <div class="flex justify-between items-center py-1.5 border-b border-gray-800">
-        <span class="truncate mr-2">${t.title}</span>
-        <span class="text-xs text-gray-500 flex-shrink-0">${formatDate(t.deadline)}</span>
+      <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-800/30 border border-transparent hover:border-gray-700 transition-all">
+        <div class="w-8 h-8 rounded bg-gray-800 flex items-center justify-center text-xs">📅</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium truncate">${t.title}</div>
+          <div class="text-[10px] text-gray-500">${formatDate(t.deadline)}</div>
+        </div>
+        <div class="text-[10px] font-bold text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded uppercase">Due</div>
       </div>
     `).join('');
   }
@@ -652,14 +680,23 @@ async function loadTasks() {
   }
 
   list.innerHTML = data.data.map(t => `
-    <div class="card p-4 flex items-center gap-3 cursor-pointer hover:border-purple-700 transition-colors" onclick="openTaskModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-      <div class="flex-1 min-w-0">
-        <div class="font-medium text-sm truncate">${t.title}</div>
-        <div class="text-xs text-gray-500 mt-0.5">Due: ${formatDate(t.deadline)} · ${t.category_name || 'Uncategorized'}</div>
-        ${t.progress > 0 && t.status !== 'completed' ? `<div class="w-full bg-gray-800 rounded-full h-1 mt-2"><div class="bg-purple-500 h-1 rounded-full" style="width: ${t.progress}%"></div></div>` : ''}
+    <div class="p-4 rounded-xl bg-gray-800/20 border border-gray-800/50 flex items-center gap-4 cursor-pointer hover:border-purple-500/50 hover:bg-gray-800/40 transition-all" onclick="openTaskModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+      <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-lg flex-shrink-0">
+        ${t.status === 'completed' ? '✅' : '📋'}
       </div>
-      ${priorityBadge(t.priority)}
-      ${statusBadge(t.status)}
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-sm truncate">${t.title}</div>
+        <div class="text-xs text-gray-500 mt-1">Due: ${formatDate(t.deadline)} • ${t.category_name || 'Personal'}</div>
+        ${t.progress > 0 && t.status !== 'completed' ? `
+          <div class="w-full bg-gray-800 rounded-full h-1 mt-3">
+            <div class="bg-gradient-to-r from-purple-500 to-blue-400 h-1 rounded-full" style="width: ${t.progress}%"></div>
+          </div>
+        ` : ''}
+      </div>
+      <div class="flex flex-col items-end gap-2">
+        ${priorityBadge(t.priority)}
+        <div class="text-[10px] uppercase tracking-wider text-gray-600 font-bold">${t.status}</div>
+      </div>
     </div>
   `).join('');
 }
@@ -740,14 +777,29 @@ async function loadAchievements() {
 async function loadLeaderboard() {
   const data = await API.getMyStats();
   if (!data?.success) return;
-  const medals = ['🥇','🥈','🥉'];
-  document.getElementById('leaderboardList').innerHTML = data.data.leaderboard.map((u, i) => `
-    <div class="flex items-center gap-3 py-2 border-b border-gray-800 ${u.id === currentUser.id ? 'bg-purple-950 rounded px-2' : ''}">
-      <span class="text-lg w-6 text-center">${medals[i] || i+1}</span>
-      <span class="flex-1 text-sm font-medium">${u.name} ${u.id === currentUser.id ? '(you)' : ''}</span>
-      <span class="mono text-sm text-yellow-400">${u.xp_points} XP</span>
-    </div>
-  `).join('');
+  const ranks = ['gold', 'silver', 'bronze'];
+  const rankColors = ['#fbbf24', '#94a3b8', '#cd7c4a'];
+  
+  document.getElementById('leaderboardList').innerHTML = data.data.leaderboard.map((u, i) => {
+    const isMe = u.id === currentUser.id;
+    const rankClass = ranks[i] || '';
+    const avatarColor = rankColors[i] || '#6c63ff';
+    const initials = u.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    
+    return `
+      <div class="flex items-center gap-4 p-3 rounded-xl border border-transparent transition-all ${isMe ? 'bg-purple-950/30 border-purple-800/50' : 'hover:bg-gray-800/30'}">
+        <div class="mono text-lg font-bold w-6 text-center rank ${rankClass}">${i + 1}</div>
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style="background:${avatarColor}22; color:${avatarColor}; border:1px solid ${avatarColor}44">
+          ${initials}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold truncate ${isMe ? 'text-purple-300' : ''}">${u.name} ${isMe ? '(you)' : ''}</div>
+          <div class="text-xs text-gray-500">Student</div>
+        </div>
+        <div class="mono text-sm font-bold text-yellow-400">${u.xp_points.toLocaleString()} XP</div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── Notifications ──────────────────────────────────────────
