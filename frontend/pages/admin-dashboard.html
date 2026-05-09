@@ -13,23 +13,41 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <style>
-  body { font-family: 'DM Sans', sans-serif; background: #0f1117; color: #e8eaf6; }
+  :root {
+    --bg: #0f1117; --bg2: #171b26; --bg3: #1e2233; --border: #2a2f45;
+    --text: #e8eaf6; --text2: #8b90a7; --accent: #4fc3f7; --accent2: #6c63ff;
+    --green: #4ade80; --amber: #fbbf24; --red: #f87171; --pink: #f472b6;
+    --card-bg: #171b26; --badge-bg: #252a3d;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
   .mono { font-family: 'Space Mono', monospace; }
-  .card { background: #171b26; border: 1px solid #2a2f45; border-radius: 12px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: #8b90a7; cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
-  .nav-item:hover { color: #e8eaf6; background: #1e2233; }
-  .nav-item.active { color: #4fc3f7; border-left-color: #4fc3f7; background: rgba(79,195,247,.08); }
-  input, select, textarea { background: #1e2233; border: 1px solid rgba(255,255,255,0.1); color: #e8eaf6; border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #4fc3f7; }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; }
+  
+  /* Premium Stat Cards */
+  .stat-card { position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 0 0 60px; opacity: .08; }
+  .stat-card.blue::before { background: var(--accent); }
+  .stat-card.purple::before { background: var(--accent2); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.amber::before { background: var(--amber); }
+
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13px; color: var(--text2); cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,195,247,.08); }
+  
+  input, select, textarea { background: var(--bg3); border: 1px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  
   .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
-  .btn-primary { background: #4fc3f7; color: #0f1117; }
+  .btn-primary { background: var(--accent); color: #0f1117; }
   .btn-primary:hover { background: #38b2f0; }
-  .btn-danger { background: rgba(248,113,113,.2); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+  .btn-danger { background: rgba(248,113,113,.2); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
   .modal-bg { background: rgba(0,0,0,.7); }
   .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
-  .p-high { background: rgba(248,113,113,.15); color: #f87171; }
-  .p-med  { background: rgba(251,191,36,.15);  color: #fbbf24; }
-  .p-low  { background: rgba(74,222,128,.15);  color: #4ade80; }
+  .p-high { background: rgba(248,113,113,.15); color: var(--red); }
+  .p-med  { background: rgba(251,191,36,.15);  color: var(--amber); }
+  .p-low  { background: rgba(74,222,128,.15);  color: var(--green); }
 
   /* Mobile Responsive Sidebar */
   @media (max-width: 1024px) {
@@ -66,9 +84,12 @@
 <!-- Sidebar -->
 <div id="mainSidebar" class="sidebar w-64 bg-gray-900 border-r border-gray-800 flex flex-col flex-shrink-0">
   <div class="p-5 border-b border-gray-800 flex justify-between items-center">
-    <div>
-      <div class="mono text-sm font-bold text-blue-300">TaskAcademy</div>
-      <div class="text-xs text-gray-500 mt-1 tracking-widest">ADMIN PANEL</div>
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-lg">🚀</div>
+      <div>
+        <div class="mono text-sm font-bold text-white">TaskAcademy</div>
+        <div class="text-[10px] text-gray-500 tracking-widest uppercase">Admin Panel</div>
+      </div>
     </div>
     <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">✕</button>
   </div>
@@ -100,11 +121,11 @@
 
     <!-- OVERVIEW -->
     <div id="page-overview">
-      <div class="grid grid-cols-4 gap-3 mb-5">
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Students</div><div id="stat-students" class="mono text-2xl text-blue-300">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-tasks" class="mono text-2xl text-purple-400">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
-        <div class="card p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completion Rate</div><div id="stat-rate" class="mono text-2xl text-yellow-400">—</div></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div class="card stat-card blue p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Students</div><div id="stat-students" class="mono text-2xl text-blue-300">—</div></div>
+        <div class="card stat-card purple p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Tasks</div><div id="stat-tasks" class="mono text-2xl text-purple-400">—</div></div>
+        <div class="card stat-card green p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completed</div><div id="stat-done" class="mono text-2xl text-green-400">—</div></div>
+        <div class="card stat-card amber p-4"><div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Completion Rate</div><div id="stat-rate" class="mono text-2xl text-yellow-400">—</div></div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div class="card p-4">
@@ -270,14 +291,21 @@ async function loadAdminTasks() {
   document.getElementById('adminTasksList').innerHTML = data.data.length === 0
     ? '<p class="text-gray-500 text-sm">No tasks yet. Create one!</p>'
     : data.data.map(t => `
-      <div class="card p-4 flex items-center gap-3">
+      <div class="card p-4 flex items-center gap-4 hover:border-gray-600 transition-colors">
+        <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">📋</div>
         <div class="flex-1 min-w-0">
-          <div class="font-medium text-sm">${t.title}</div>
-          <div class="text-xs text-gray-500 mt-0.5">Assigned to: ${t.assigned_to_name || 'Unassigned'} · Due: ${formatDate(t.deadline)}</div>
+          <div class="font-semibold text-sm text-white">${t.title}</div>
+          <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
+            <span>👤 ${t.assigned_to_name || 'Unassigned'}</span>
+            <span>•</span>
+            <span>📅 ${formatDate(t.deadline)}</span>
+          </div>
         </div>
-        ${priorityBadge(t.priority)}
-        ${statusBadge(t.status)}
-        <button onclick="deleteTask(${t.id})" class="btn btn-danger text-xs py-1 px-2 flex-shrink-0">Delete</button>
+        <div class="flex items-center gap-3">
+          ${priorityBadge(t.priority)}
+          ${statusBadge(t.status)}
+          <button onclick="deleteTask(${t.id})" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">✕</button>
+        </div>
       </div>
     `).join('');
 }
@@ -294,17 +322,22 @@ async function loadStudents() {
   if (!data?.success) return;
   studentCache = data.data;
   document.getElementById('studentsList').innerHTML = data.data.map(u => `
-    <div class="card p-4 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-full bg-purple-900 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0">
+    <div class="card p-4 flex items-center gap-4 hover:border-gray-600 transition-colors">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-lg shadow-purple-500/10">
         ${u.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}
       </div>
       <div class="flex-1">
-        <div class="text-sm font-medium">${u.name}</div>
-        <div class="text-xs text-gray-500">${u.email}</div>
+        <div class="text-sm font-semibold text-white">${u.name}</div>
+        <div class="text-xs text-gray-500 mt-0.5">${u.email}</div>
       </div>
-      <div class="text-xs text-yellow-400 mono">${u.xp_points} XP</div>
-      <span class="text-xs ${u.is_active ? 'text-green-400' : 'text-red-400'}">${u.is_active ? 'Active' : 'Disabled'}</span>
-      <button onclick="toggleStudent(${u.id})" class="btn btn-ghost text-xs py-1">Toggle</button>
+      <div class="text-right flex flex-col items-end gap-1">
+        <div class="text-xs font-bold text-yellow-400 mono px-2 py-0.5 bg-yellow-400/10 rounded-full border border-yellow-400/20">${u.xp_points} XP</div>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full ${u.is_active ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-red-400'}"></span>
+          <span class="text-[10px] uppercase tracking-wider ${u.is_active ? 'text-green-400' : 'text-red-400'} font-bold">${u.is_active ? 'Active' : 'Disabled'}</span>
+        </div>
+      </div>
+      <button onclick="toggleStudent(${u.id})" class="btn bg-gray-800 border border-gray-700 text-gray-400 hover:text-white text-xs py-1.5 px-3">Manage</button>
     </div>
   `).join('');
 }
