@@ -158,14 +158,15 @@
     <div class="nav-item" onclick="showPage('achievements')">🏆 Achievements</div>
     <div class="nav-item" onclick="showPage('leaderboard')">🥇 Leaderboard</div>
   </nav>
-  <div class="p-3 border-t border-gray-800 flex items-center gap-2">
+  <div class="p-3 border-t border-gray-800 flex items-center gap-2 cursor-pointer hover:bg-gray-800/20 transition-colors" onclick="showPage('profile')">
     <div id="avatarCircle" class="w-8 h-8 rounded-full bg-purple-900 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0"></div>
     <div class="min-w-0">
       <div id="userName" class="text-xs font-medium truncate"></div>
       <div id="userXP" class="text-xs text-gray-500"></div>
     </div>
-    <button onclick="logout()" class="ml-auto text-xs text-gray-600 hover:text-red-400">⏏</button>
+    <button onclick="event.stopPropagation(); logout()" class="ml-auto text-xs text-gray-600 hover:text-red-400">⏏</button>
   </div>
+
 </div>
 
 <!-- Main Content -->
@@ -338,7 +339,57 @@
       </div>
     </div>
 
+    <!-- PROFILE PAGE -->
+    <div id="page-profile" class="hidden">
+      <div class="max-w-2xl">
+        <div class="card p-6 mb-6">
+          <div class="flex items-center gap-6 mb-8">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-purple-500/20" id="profileAvatarBig"></div>
+            <div>
+              <h2 id="profileNameBig" class="text-2xl font-bold text-white">Loading...</h2>
+              <div class="text-sm text-gray-500 mt-1" id="profileEmail"></div>
+              <div class="flex gap-3 mt-3">
+                <div class="bg-gray-800 px-3 py-1 rounded-full text-[10px] font-bold text-accent uppercase tracking-wider">Level <span id="profileLevel">1</span></div>
+                <div class="bg-gray-800 px-3 py-1 rounded-full text-[10px] font-bold text-pink-400 uppercase tracking-wider" id="profileXPText">0 XP</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-gray-800/20 border border-gray-800/50 p-4 rounded-xl">
+              <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Rank</div>
+              <div class="text-xl font-bold text-amber-400" id="profileRank">#—</div>
+            </div>
+            <div class="bg-gray-800/20 border border-gray-800/50 p-4 rounded-xl">
+              <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Total Tasks</div>
+              <div class="text-xl font-bold text-blue-300" id="profileTasks">0</div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Account Settings</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-[10px] text-gray-500 block mb-1">Display Name</label>
+                <div class="flex gap-2">
+                  <input id="editName" class="flex-1" placeholder="Your name">
+                  <button onclick="updateProfileName()" class="btn btn-primary px-4">Save</button>
+                </div>
+              </div>
+              <div class="pt-4 border-t border-gray-800">
+                <button onclick="logout()" class="text-sm text-red-400 hover:underline">Logout from session</button>
+              </div>
+              <div class="pt-2">
+                <button onclick="deleteAccount()" class="text-xs text-gray-600 hover:text-red-600 transition-colors">Delete My Account Permanently</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- GROUPS PAGE -->
+
     <div id="page-groups" class="hidden">
       <!-- Groups List View -->
       <div id="groupsListView">
@@ -1406,7 +1457,120 @@ function renderGamification(data) {
     }).join('');
   }
 }
+async function loadProfile() {
+  const data = await API.getMyStats();
+  if (!data?.success) return;
+  const d = data.data;
+  const user = firebase.auth().currentUser;
+  
+  // Fetch full user doc for extra fields
+  const userDoc = await db.collection('users').doc(user.uid).get();
+  const uData = userDoc.exists ? userDoc.data() : {};
+
+  const initials = (user.displayName || uData.name || 'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  
+  // Update Profile Card
+  setText('profName', user.displayName || uData.name || 'Anonymous');
+  setText('profEmail', user.email);
+  setText('profAvatar', initials);
+  setText('profUsername', '@' + (uData.name || 'user').toLowerCase().replace(/\s/g, ''));
+  
+  setText('profPhone', uData.phone || 'Not set');
+  setText('profDept', uData.dept || 'Not set');
+  setText('profYear', uData.year || 'Not set');
+  setText('profCollege', uData.college || 'Not set');
+  setText('profStudentId', uData.studentId || 'Not set');
+  setText('profLastLogin', user.metadata.lastSignInTime);
+
+  // Update Stats
+  setText('pStatTotal', d.totalTasks);
+  setText('pStatDone', d.completedTasks);
+  setText('pStatPend', d.pendingTasks);
+  setText('pStatOver', d.overdueTasks || 0);
+  setText('pStatProd', (d.productivity || 0) + '%');
+
+  // Fill Edit Inputs
+  setInput('editProfPhone', uData.phone || '');
+  setText('editName', user.displayName || uData.name || ''); // If this exists
+  setInput('editProfDept', uData.dept || '');
+  setInput('editProfYear', uData.year || '');
+  setInput('editProfCollege', uData.college || '');
+  setInput('editProfStudentId', uData.studentId || '');
+  
+  // Load extra profile components
+  loadProfileDeadlines(d.upcomingTasks);
+  loadProfileBadges(d.xp_points);
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if(el) el.textContent = val;
+}
+function setInput(id, val) {
+  const el = document.getElementById(id);
+  if(el) el.value = val;
+}
+
+async function saveProfileSettings() {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+
+  const updates = {
+    phone: document.getElementById('editProfPhone').value.trim(),
+    dept: document.getElementById('editProfDept').value.trim(),
+    year: document.getElementById('editProfYear').value.trim(),
+    college: document.getElementById('editProfCollege').value.trim(),
+    studentId: document.getElementById('editProfStudentId').value.trim(),
+  };
+
+  try {
+    await db.collection('users').doc(user.uid).update(updates);
+    alert("Profile settings saved successfully!");
+    loadProfile();
+  } catch (err) {
+    console.error(err);
+    alert("Error saving settings");
+  }
+}
+
+function loadProfileDeadlines(tasks) {
+  const container = document.getElementById('profUpcoming');
+  if(!container) return;
+  if(!tasks || tasks.length === 0) {
+    container.innerHTML = '<p class="text-gray-500 text-xs italic">No upcoming deadlines</p>';
+    return;
+  }
+  container.innerHTML = tasks.slice(0, 5).map(t => `
+    <div class="flex items-center justify-between p-2 rounded bg-gray-800/30">
+      <div class="min-w-0">
+        <div class="text-xs font-medium truncate">${t.title}</div>
+        <div class="text-[10px] text-gray-500">${formatDate(t.deadline)}</div>
+      </div>
+      ${priorityBadge(t.priority)}
+    </div>
+  `).join('');
+}
+
+function loadProfileBadges(xp) {
+  const container = document.getElementById('profBadges');
+  if(!container) return;
+  const badges = [
+    { name: '7-day Streak', icon: '🔥', req: 0 },
+    { name: 'Fast Finisher', icon: '⚡', req: 500 },
+    { name: 'Study Pro', icon: '📚', req: 1000 },
+    { name: 'Team Player', icon: '🤝', req: 2000 },
+    { name: 'Top Student', icon: '🏆', req: 5000 }
+  ];
+  container.innerHTML = badges.map(b => `
+    <div class="badge ${xp < b.req ? 'opacity-30 grayscale' : ''}">
+      <span class="badge-icon">${b.icon}</span>
+      <span class="text-[9px]">${b.name}</span>
+    </div>
+  `).join('');
+}
+
 </script>
+
 
 </body>
 </html>

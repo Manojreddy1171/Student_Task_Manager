@@ -114,19 +114,23 @@
     </div>
     <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">✕</button>
   </div>
-  <nav class="flex-1 py-3">
+  <nav class="flex-1 py-3 overflow-y-auto">
     <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
     <div class="nav-item" onclick="showPage('tasks')">📋 Manage Tasks</div>
     <div class="nav-item" onclick="showPage('students')">👨‍🎓 Students</div>
     <div class="nav-item" onclick="showPage('groups')">👥 Groups</div>
     <div class="nav-item" onclick="showPage('analytics')">📈 Analytics</div>
   </nav>
-  <div class="p-3 border-t border-gray-800 flex items-center gap-2">
-    <div class="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-300" id="adminAvatar"></div>
-    <div id="adminName" class="text-xs font-medium"></div>
-    <button onclick="logout()" class="ml-auto text-xs text-gray-600 hover:text-red-400">⏏</button>
+  <div class="p-3 border-t border-gray-800 flex items-center gap-2 cursor-pointer hover:bg-gray-800/20 transition-colors" onclick="showPage('profile')">
+    <div id="adminAvatar" class="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-300 flex-shrink-0"></div>
+    <div class="min-w-0">
+      <div id="adminName" class="text-xs font-medium truncate"></div>
+      <div class="text-[10px] text-gray-500">System Administrator</div>
+    </div>
+    <button onclick="event.stopPropagation(); logout()" class="ml-auto text-xs text-gray-600 hover:text-red-400">⏏</button>
   </div>
 </div>
+
 
 <!-- Main -->
 <div class="flex-1 overflow-y-auto flex flex-col">
@@ -225,6 +229,35 @@
       </div>
     </div>
 
+    <!-- PROFILE -->
+    <div id="page-profile" class="hidden">
+      <div class="max-w-md mx-auto space-y-6">
+        <div class="card p-6 text-center">
+          <div id="adminProfileAvatar" class="w-20 h-20 rounded-full bg-blue-900 mx-auto flex items-center justify-center text-2xl font-bold text-blue-300 mb-4 border-2 border-blue-400/20 shadow-xl shadow-blue-500/10"></div>
+          <h2 id="adminProfileName" class="text-xl font-bold">Admin</h2>
+          <p id="adminProfileEmail" class="text-sm text-gray-500">admin@taskacademy.com</p>
+        </div>
+        
+        <div class="card p-6">
+          <h3 class="font-semibold mb-4 text-sm">Update Profile</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1 ml-1">Display Name</label>
+              <input id="editAdminName" placeholder="Your Name" />
+            </div>
+            <button onclick="updateAdminProfile()" class="btn btn-primary w-full">Save Changes</button>
+          </div>
+        </div>
+
+        <div class="card p-6 bg-red-900/10 border-red-900/30">
+          <h3 class="font-semibold mb-2 text-sm text-red-400">Danger Zone</h3>
+          <p class="text-xs text-gray-500 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+          <button onclick="logout()" class="btn btn-danger w-full">Logout from System</button>
+        </div>
+      </div>
+    </div>
+
+
   </div>
 </div>
 
@@ -286,10 +319,15 @@ requireAuth('admin', (user) => {
 
 let studentCache = [];
 
-const pages = ['overview','tasks','students','groups','analytics'];
+const pages = ['overview','tasks','students','groups','analytics','profile'];
 function showPage(name) {
-  pages.forEach(p => document.getElementById(`page-${p}`).classList.add('hidden'));
-  document.getElementById(`page-${name}`).classList.remove('hidden');
+  pages.forEach(p => {
+    const el = document.getElementById(`page-${p}`);
+    if(el) el.classList.add('hidden');
+  });
+  const pageEl = document.getElementById(`page-${name}`);
+  if(pageEl) pageEl.classList.remove('hidden');
+  
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   event?.currentTarget?.classList.add('active');
   document.getElementById('pageTitle').textContent = name.charAt(0).toUpperCase() + name.slice(1);
@@ -298,10 +336,35 @@ function showPage(name) {
   if (name === 'students')  loadStudents();
   if (name === 'groups')    loadAdminGroups();
   if (name === 'analytics') loadAnalytics();
+  if (name === 'profile')   loadAdminProfile();
 
-  // Close sidebar on mobile after navigation
-  if (window.innerWidth < 1024) {
-    toggleSidebar();
+  if (window.innerWidth < 1024) toggleSidebar();
+}
+
+async function loadAdminProfile() {
+  const user = firebase.auth().currentUser;
+  if(!user) return;
+  
+  const initials = user.displayName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('adminProfileAvatar').textContent = initials;
+  document.getElementById('adminProfileName').textContent = user.displayName;
+  document.getElementById('adminProfileEmail').textContent = user.email;
+  document.getElementById('editAdminName').value = user.displayName;
+}
+
+async function updateAdminProfile() {
+  const newName = document.getElementById('editAdminName').value.trim();
+  if (!newName) return alert("Please enter a name");
+
+  try {
+    const user = firebase.auth().currentUser;
+    await user.updateProfile({ displayName: newName });
+    await db.collection('users').doc(user.uid).update({ name: newName });
+    alert("Admin profile updated!");
+    location.reload();
+  } catch (err) {
+    console.error(err);
+    alert("Error updating profile");
   }
 }
 
